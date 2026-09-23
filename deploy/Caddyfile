@@ -1,0 +1,27 @@
+# replace with your domain; Caddy fetches the certificate itself
+igaos.example.com {
+	encode zstd gzip
+
+	# the solve stream is Server-Sent Events: no buffering, long-lived
+	@stream path /api/stream
+	reverse_proxy @stream studio:8420 {
+		flush_interval -1
+		transport http {
+			response_header_timeout 5m
+		}
+	}
+
+	reverse_proxy studio:8420
+
+	# a crude but effective public-demo guard
+	rate_limit {
+		zone solves {
+			match {
+				path /api/stream /api/compare /api/algorithms
+			}
+			key    {remote_host}
+			events 10
+			window 1m
+		}
+	}
+}

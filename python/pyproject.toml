@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "igaos"
+version = "0.2.0"
+description = "Indigenous GPU-Accelerated Optimization Solver — linear, mixed-integer and convex quadratic programming"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "Apache-2.0" }
+keywords = ["optimization", "linear programming", "mixed integer", "simplex",
+            "interior point", "solver", "operations research"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: C++",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+# Deliberately empty.  The binding is ctypes over the C ABI, so installing it
+# pulls in no compiler, no numpy, and no build step -- which is the whole reason
+# the interface is a C ABI rather than a C++ extension module.
+dependencies = []
+
+[project.urls]
+Source = "https://example.invalid/igaos"
+
+[tool.setuptools]
+packages = ["igaos"]
+
+[tool.setuptools.package-data]
+igaos = ["*.so", "*.dylib", "*.dll", "lib/*"]

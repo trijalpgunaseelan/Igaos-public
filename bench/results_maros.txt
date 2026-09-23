@@ -1,0 +1,87 @@
+IGAOS vs OSQP on the Maros and Meszaros convex QP set, re-measured 2026-08-28
+aarch64 Linux, GCC 11.  138 instances, 20 s limit each, OSQP at eps 1e-9 with
+polishing.  Instances: github.com/YimingYAN/QP-Test-Problems (QPS_Files), the
+collection Mittelmann's convex QP benchmark is built on.
+
+    ./bench/fetch_benchmarks.sh
+    pip install osqp
+    IGAOS_BIN=./build/igaos python3 bench/qp_bench.py \
+        --dir benchmarks/qp_maros --time-limit 20
+
+IGAOS status over all 138           (26 Aug, for comparison)
+  optimal            109                    102
+  numerical_error     22                     29
+  time_limit           5                      3
+  iteration_limit      2                      2
+  hard-timeout         0                      2
+
+Where both solved (69 instances)
+  agreeing to 1e-6 relative .... 65 / 69
+  MISMATCH AUG3DQP    ours 675.240475669   osqp 675.2376712749    rel 4.1e-06
+  MISMATCH DTOC3      ours 235.260422755   osqp 235.2624810784    rel 8.7e-06
+  MISMATCH QRECIPE    ours -266.6153603    osqp -266.6159999301   rel 2.4e-06
+  MISMATCH UBH1       ours 1.12700460787   osqp 1.1160008157      rel 5.2e-03
+
+Solved by IGAOS but not by OSQP inside 20 s: 40
+  CONT-200, CONT-201, CONT-300, LISWET1, LISWET10, LISWET11, LISWET12, LISWET2,
+  LISWET3, LISWET4, LISWET5, LISWET6, LISWET7, LISWET8, LISWET9, PRIMALC1,
+  PRIMALC2, PRIMALC5, PRIMALC8, QBORE3D, QE226, QETAMACR, QFORPLAN, QGFRDXPN,
+  QGROW15, QGROW22, QGROW7, QSCAGR25, QSCAGR7, QSCFXM2, QSCFXM3, QSCRS8,
+  QSCTAP1, QSCTAP2, QSCTAP3, QSHARE2B, STADAT1, STADAT2, STADAT3, YAO
+
+Solved by OSQP but not by IGAOS inside 20 s: 15
+  CONT-101, CVXQP2_L, QBRANDY, QFFFFF80, QPCBOEI1, QPCSTAIR, QSC205, QSEBA,
+  QSHELL, QSHIP04L, QSHIP04S, QSHIP08L, QSHIP08S, QSHIP12L, QSHIP12S
+
+
+WHAT CHANGED, AND WHY -- DEFECT 25
+----------------------------------
+Seven instances moved from failing to solved and none moved the other way:
+KSIP, QBANDM, QETAMACR, QGROW15, QGROW7, QRECIPE, QSTANDAT.  No objective on an
+already-solved instance changed by more than 1e-6 relative.
+
+The 26 August run of this file ended by naming the weakness:
+
+    "The second list is almost entirely the Q-prefixed family: Netlib linear
+     programs with a quadratic objective attached.  They are badly scaled by
+     construction and they are where this solver's QP path is weakest."
+
+That was the symptom.  The cause turned out to be in this solver, not in the
+instances.  The scaling is an iterated geometric-mean equilibration computed
+from A -- and ONLY from A.  Q is then transformed consistently, D Q D, so the
+scaled problem has exactly the same optimum; this was never a wrong answer.  But
+Q gets no vote in choosing D, and the KKT matrix the interior point method
+factors contains both blocks.  A D that flattens A can leave Q spanning orders
+of magnitude it did not span before; the method then stalls with a large primal
+residual and reports numerical_error -- on a problem that solves without any
+scaling at all.
+
+QBANDM is the clean demonstration:
+
+    ./build/igaos QBANDM.QPS                 numerical_error, primal infeas 178
+    ./build/igaos QBANDM.QPS --no-scaling    optimal 16352.3424715
+
+The published Maros value is 1.6352342e+04.
+
+The fix is a fallback, not a new scaling rule: a convex QP that comes back
+numerical_error is retried on the unscaled model, and if that fails too, on the
+original model with neither presolve nor scaling.  It costs nothing on a model
+that converges, it is the same shape as the interior-point-to-simplex fallback
+the LP path has always had -- a failure on one path is a statement about the
+path, not about the model -- and it cannot turn a good answer into a bad one,
+because it only runs when there is no answer at all.
+
+WHAT IT DID NOT FIX
+-------------------
+Twenty-two instances still end in numerical_error, and thirteen of those are
+still the Q-prefixed family, six of them the QSHIP set.  Choosing the scaling
+from [A; Q] together rather than from A alone is the principled fix and it is
+not written.  The fallback recovers the instances where the scaling was the
+whole problem; it does nothing for the ones whose KKT system is badly
+conditioned however it is scaled.  QSHARE1B is the honest example: unscaled it
+still fails, and its residual only drops from 4.4e+04 to 2.9e+03 with presolve
+turned off as well.
+
+UBH1 remains the one substantial objective disagreement, at 5.2e-03.  It has
+been in this file since the first run, and neither this change nor anything else
+has touched it.

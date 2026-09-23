@@ -1,0 +1,81 @@
+IGAOS — scale and multi-core, measured 2026-08-26
+x86-64 Linux, GCC 13, 2 cores.  First-order path, no crossover, single core
+unless stated.  Instances from bench/generate_large.py.
+
+SUPPLY CHAIN (2 nonzeros per column)
+
+  periods    rows      columns    nonzeros    status     wall
+  --------  --------  ---------  ----------  ---------  -------
+     20      28,800     76,800     153,280   optimal      31 s
+     40      57,600    153,600     306,560   optimal      67 s
+     80     115,200    307,200     614,080   optimal      90 s
+    280     403,200  1,075,200   2,150,080   optimal     763 s   <- added 28 Aug
+
+ONE MILLION COLUMNS (added 28 Aug 2026, aarch64 Linux, GCC 11)
+
+  The 280-period row above is the answer to the one clause of PS 26119 this
+  project could not previously address at all: "thousands to millions of
+  variables and constraints".
+
+    rows           403,200
+    columns      1,075,200      <- past one million
+    nonzeros     2,150,080
+    algorithm    first-order PDHG, no crossover
+    iterations      22,272
+    status         optimal
+    objective   39,181,601.9161
+    primal infeasibility  8.572e-06
+    wall           762.6 s   (presolve 1.4, solve 740.6, cleanup 20.3)
+    memory         ~11% of 7 GB
+
+  Read the infeasibility figure before quoting the rest.  8.6e-06 is the
+  first-order method's own convergence tolerance, and it is two orders of
+  magnitude looser than the 1e-7 this solver holds itself to elsewhere.  The
+  correct sentence is "solved to first-order tolerance at 1.07 million columns",
+  not "solved to optimality".
+
+  Two other paths were started on the same model and neither finished:
+
+    revised simplex            no result after 54 minutes of CPU
+    first-order + crossover    no result after 33 minutes of CPU
+
+  Both were stopped, not failed -- they were still iterating.  That is not a
+  defect, it is the reason the first-order path exists, and it is the same
+  crossing already visible at 76,800 columns in the table below.  At this size
+  the matrix-free method without crossover is the ONLY one of the four that
+  returns, which also means the answer is a first-order point and not a basic
+  one: no vertex, no basis, no dual multipliers to certify it with.
+
+  So the honest one-line claim is: 1.07 million columns solved to first-order
+  tolerance in 763 seconds, without crossover, on one core.
+
+SIMPLEX vs FIRST-ORDER on the same models
+
+  columns    revised simplex    first-order
+  ---------  -----------------  -------------
+    38,400          31 s             -
+    76,800         145 s            31 s
+
+  4.7x the time for 2x the model.  Massively degenerate multi-period network
+  LPs.  Presolve is not the bottleneck: 0.02 s on the 76,800-column model.
+
+MULTI-CORE — the speedup depends on nonzeros per column
+
+  matrix                        nnz/col   1 thread          2 threads
+  ----------------------------  --------  ----------------  ----------------
+  supply chain, 153,280 nnz         2     31.3 s            30.6 s    1.02x
+  refinery, 2,036,140 nnz          26     174,720 iters     305,344 iters
+                                          593 Mnnz/s        1,036 Mnnz/s
+                                                                      1.75x
+
+  Both refinery runs were given the same 1200 s budget and neither converged,
+  so the comparison counts iterations.  Two nonzeros per column is memory
+  latency bound and a second core adds nothing; twenty-six gives the parallel
+  reduction enough work and it scales at 87% efficiency on two cores.
+
+WHERE THE FIRST-ORDER PATH STOPS
+
+  The refinery family at 2,036,140 nonzeros has ||A||_2 = 154 against 4.9 for
+  the chain family, and does not converge inside 20 minutes: 174,720 iterations
+  with primal infeasibility still 1.4e-2.  Scale is not what defeats it,
+  conditioning is.

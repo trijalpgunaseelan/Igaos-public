@@ -1,0 +1,1753 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IGAOS Solver Studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d6f6b'/%3E%3Cpath d='M8 22V10M8 22h16M13 19l4-6 4 3 3-6' stroke='%23fff' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  color-scheme: light dark;
+  --bg:#f2f5f8; --surface:#fff; --surface-2:#eaf0f4; --surface-3:#dde7ee;
+  --line:#d3dee6; --line-soft:#e3ebf1;
+  --ink:#0b1a22; --ink-2:#4a636f; --ink-3:#7d94a1;
+  --nav:#0f1c24; --nav-ink:#c9dae3; --nav-ink-2:#7d97a5; --nav-sel:#1b2f3a;
+  --accent:#0d6f6b; --accent-soft:#d6ecea;
+  --live:#1668c4; --live-soft:#dbe8f8;
+  --warm:#c2610a; --warm-soft:#fbeedd;
+  --good:#1a7a3d; --good-soft:#ddf0e3;
+  --bad:#b0392c; --bad-soft:#fadedb;
+  --violet:#6b4bb8; --violet-soft:#e7e0f7;
+  --idle:#b4c5cf;
+  --code-bg:#101c24; --code-ink:#cfe0ea; --code-key:#7fd6cf;
+  --grid:#dae3ea;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+ :root:not([data-theme="light"]){
+  --bg:#070d11; --surface:#0e181e; --surface-2:#15242c; --surface-3:#1c2f38;
+  --line:#243740; --line-soft:#1a2932;
+  --ink:#e9f2f6; --ink-2:#9db4c0; --ink-3:#6d8794;
+  --nav:#0a1318; --nav-ink:#c2d6e0; --nav-ink-2:#6d8794; --nav-sel:#16272f;
+  --accent:#3fbdb6; --accent-soft:#0f3634;
+  --live:#4d9bea; --live-soft:#102438;
+  --warm:#e09a3c; --warm-soft:#33260f;
+  --good:#4cba6e; --good-soft:#10301c;
+  --bad:#e2705f; --bad-soft:#361814;
+  --violet:#a58ae8; --violet-soft:#241b3a;
+  --idle:#31434c;
+  --code-bg:#060d12; --code-ink:#bcd2de; --code-key:#5fc9c1;
+  --grid:#16242c;
+ }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);
+     display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit}
+
+/* ====================================================== the command bar === */
+.bar{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:8px 14px;
+     background:var(--surface);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:9px;padding-right:12px;
+       border-right:1px solid var(--line)}
+.brand .mark{width:30px;height:30px;border-radius:8px;background:var(--accent);
+  display:grid;place-items:center;color:#fff;font:700 13px var(--mono);flex:0 0 auto}
+.brand b{display:block;font-size:13px;letter-spacing:.04em;line-height:1.15}
+.brand span{display:block;font-size:9.5px;letter-spacing:.13em;color:var(--ink-3);
+            text-transform:uppercase}
+.slot{display:flex;flex-direction:column;gap:1px;min-width:0}
+.slot .k{font:9.5px/1 var(--sans);letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+.slot .v{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;
+         text-overflow:ellipsis;max-width:340px}
+.chipbox{display:flex;align-items:center;gap:8px;padding:5px 10px;border:1px solid var(--line);
+         border-radius:8px;background:var(--surface)}
+.chipbox .k{font:9.5px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.state{font:600 11.5px var(--sans);padding:3px 9px;border-radius:6px;
+       background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+.state.run{background:var(--live-soft);color:var(--live)}
+.state.ok{background:var(--good-soft);color:var(--good)}
+.state.warn{background:var(--warm-soft);color:var(--warm)}
+.state.bad{background:var(--bad-soft);color:var(--bad)}
+.state.rep{background:var(--violet-soft);color:var(--violet)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block;
+     animation:blip 1s ease-in-out infinite;margin-right:5px;vertical-align:middle}
+@keyframes blip{0%,100%{opacity:1}50%{opacity:.2}}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{background:var(--surface);border:0;border-right:1px solid var(--line);
+  padding:6px 11px;font-size:12px;color:var(--ink-2);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:640}
+.seg button:hover:not([aria-pressed="true"]):not([disabled]){background:var(--surface-2)}
+.seg button[disabled]{opacity:.4;cursor:default}
+.tbtn{display:flex;align-items:center;gap:6px;background:var(--surface);color:var(--ink);
+  border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:12.5px;cursor:pointer}
+.tbtn:hover:not([disabled]){background:var(--surface-2)}
+.tbtn[disabled]{opacity:.4;cursor:default}
+.tbtn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:640}
+.tbtn.primary:hover:not([disabled]){filter:brightness(1.1);background:var(--accent)}
+.grow{flex:1 1 auto}
+.envline{font:10.5px/1.35 var(--mono);color:var(--ink-3);text-align:right;white-space:nowrap}
+
+/* ======================================================== the three panes = */
+/* Three panes for as long as they can each hold their content; the widths
+   below shrink in step so a 1000-px browser window still gets the real layout
+   instead of the stacked fallback. */
+main{flex:1 1 auto;display:grid;min-height:0;
+     grid-template-columns:minmax(196px,262px) minmax(360px,1fr) minmax(298px,376px)}
+@media (max-width:1500px){
+  .card{width:206px} .rowc.three>.card{flex:1 1 176px;max-width:230px}
+  .rowc.four>.card{flex:1 1 150px;max-width:200px}
+  .lanes{min-width:0}
+}
+/* Narrower than this, four cards will not sit in one legible row. Rather than
+   shrink them into unreadability or leave a horizontal scrollbar across the
+   diagram, cap the row at two cards wide and let them wrap two-by-two. The
+   edges are drawn from measured DOM positions, so they follow the cards
+   wherever those land -- nothing about the graph is hard-coded to a layout. */
+@media (max-width:1290px){
+  /* Give the diagram the room back by taking it off the two side panes. */
+  main{grid-template-columns:204px minmax(330px,1fr) 306px}
+  .lanes{min-width:0}
+  .rowc{gap:9px}
+  .rowc>.card,.rowc.three>.card,.rowc.four>.card{
+    flex:0 0 auto;width:174px;max-width:174px;padding:6px 9px 7px}
+  .rowc.three,.rowc.four{max-width:357px;margin-left:auto;margin-right:auto}
+  .cname{font-size:11.5px} .csub{font-size:9.5px} .cmet{font-size:9.5px}
+  .ico{width:17px;height:17px}
+  .work{max-height:184px}
+  .tlrow{grid-template-columns:96px 1fr 58px;font-size:10px;height:16px}
+  .axis{grid-template-columns:96px 1fr 58px}
+}
+/* Below that there is genuinely no room for three columns side by side, so
+   stack them and let every pane grow to its own content rather than scroll. */
+@media (max-width:980px){
+  main{grid-template-columns:1fr;overflow:auto}
+  .pane{border-right:0;border-bottom:1px solid var(--line)}
+  .flowwrap{overflow:visible;height:auto;min-height:0}
+  .lanes{min-width:0}
+  .work{max-height:none}
+  .console{min-height:460px}
+  .card{width:212px}
+}
+.pane{min-height:0;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+.pane:last-child{border-right:0}
+.hd{flex:0 0 auto;padding:9px 14px;border-bottom:1px solid var(--line-soft);background:var(--surface);
+    font:660 9.5px/1.3 var(--sans);letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);
+    display:flex;align-items:center;gap:8px}
+.hd .sub{font:400 11.5px var(--sans);letter-spacing:0;text-transform:none;color:var(--ink-2)}
+.scroll{overflow:auto;min-height:0;flex:1 1 auto}
+
+/* ------------------------------------------------------------- left pane - */
+.side{background:var(--nav)}
+.side .hd{background:transparent;border-bottom-color:#1d2f39;color:var(--nav-ink-2)}
+.group{padding:9px 12px 2px;font:660 9px/1 var(--sans);letter-spacing:.15em;
+       text-transform:uppercase;color:var(--nav-ink-2)}
+.mdl{display:block;width:100%;text-align:left;background:none;border:0;color:var(--nav-ink);
+     padding:7px 12px;cursor:pointer;border-left:3px solid transparent;font:inherit}
+.mdl:hover{background:var(--nav-sel)}
+.mdl[aria-pressed="true"]{background:var(--nav-sel);border-left-color:var(--accent)}
+.mdl .n{font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+        line-height:1.3}
+.mdl .m{display:block;font:10px/1.4 var(--mono);color:var(--nav-ink-2);margin-top:2px}
+/* A magnitude bar: one hue, recessive track, 4px rounded data-end anchored to
+   the baseline. Single measure, so no legend and no colour coding by rank. */
+.magtrack{position:relative;height:9px;border-radius:5px;background:var(--surface-3);
+  min-width:70px;overflow:hidden}
+.magfill{position:absolute;left:0;top:0;bottom:0;border-radius:0 4px 4px 0;
+  background:var(--accent)}
+td.magcell{width:34%;padding-right:12px}
+.solmeta{display:flex;gap:18px;flex-wrap:wrap;margin:2px 0 8px}
+.solmeta b{font:11px/1.5 var(--mono);color:var(--ink)}
+.solmeta span{font-size:10.5px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase}
+.kindtag{font:9px/1 var(--mono);padding:2px 5px;border-radius:3px;
+     border:1px solid #2b4250;color:var(--nav-ink-2);letter-spacing:.04em}
+.kindtag.MILP{color:#e0a355;border-color:#5a4527}
+.kindtag.QP{color:#4fc4bd;border-color:#255049}
+.kindtag.MIQP{color:#b39ce8;border-color:#3e3560}
+.slow{font:9px/1 var(--sans);color:#e0a355;border:1px dashed #5a4527;padding:2px 5px;border-radius:3px}
+.opts{padding:10px 12px;border-top:1px solid #1d2f39}
+.opts label.f{display:flex;flex-direction:column;gap:3px;margin-bottom:8px;
+              font-size:11px;color:var(--nav-ink-2)}
+.opts select,.opts input,.opts textarea{background:#0b141a;color:var(--nav-ink);
+  border:1px solid #253944;border-radius:6px;padding:5px 7px;font:inherit;font-size:12.5px}
+.opts textarea{width:100%;min-height:74px;font:11px/1.45 var(--mono);resize:vertical}
+.opts .check{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--nav-ink);
+             margin-bottom:5px}
+.opts .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opts .hint{font-size:10.5px;line-height:1.5;color:var(--nav-ink-2);margin-top:9px}
+
+/* ---------------------------------------------------------- centre canvas - */
+.canvas{background:var(--bg);
+  background-image:radial-gradient(var(--grid) 1px, transparent 1px);
+  background-size:22px 22px}
+.legend{flex:0 0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+        padding:7px 16px;border-bottom:1px solid var(--line-soft);background:var(--surface);
+        font-size:11px;color:var(--ink-2)}
+.legend .t{font:660 9.5px var(--sans);letter-spacing:.13em;text-transform:uppercase;
+           color:var(--ink-3);margin-right:auto}
+.legend i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:6px;
+          vertical-align:-1px;border:1.5px solid var(--idle);background:transparent}
+.legend .k-run i{border-color:var(--live);background:var(--live-soft)}
+.legend .k-done i{border-color:var(--accent);background:var(--accent-soft)}
+.legend .k-skip i{border-style:dashed}
+.legend .k-fail i{border-color:var(--bad);background:var(--bad-soft)}
+
+.flowwrap{position:relative;flex:1 1 auto;min-height:0;overflow:auto;padding:11px 18px 10px}
+#edges{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+.lanes{position:relative;display:flex;flex-direction:column;gap:11px;width:100%}
+.lane{position:relative}
+.lane .cap{font:660 8.5px var(--sans);letter-spacing:.15em;text-transform:uppercase;
+           color:var(--ink-3);margin-bottom:4px;position:relative;z-index:1;
+           display:inline-block;background:var(--bg);padding-right:9px}
+.rowc{display:flex;justify-content:center;gap:13px;flex-wrap:wrap}
+.rowc+.rowc{margin-top:11px}
+.rowc.four>.card{flex:1 1 168px;max-width:212px}
+.rowc.three>.card{flex:1 1 196px;max-width:250px}
+
+.card{position:relative;width:228px;background:var(--surface);border:1.5px solid var(--line);
+      border-radius:11px;padding:7px 10px 8px;cursor:pointer;text-align:left;
+      transition:border-color .15s, background .15s, box-shadow .15s;z-index:1}
+.card:hover{border-color:var(--ink-3)}
+.card:focus-visible{outline:2px solid var(--live);outline-offset:2px}
+.chead{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.ico{width:19px;height:19px;border-radius:6px;background:var(--surface-2);display:grid;
+     place-items:center;flex:0 0 auto}
+.ico svg{width:13px;height:13px;stroke:var(--ink-2);fill:none;stroke-width:1.9;
+         stroke-linecap:round;stroke-linejoin:round}
+.chips{margin-left:auto;display:flex;align-items:center;gap:5px}
+.chip{font:9.5px/1 var(--mono);padding:2.5px 5px;border-radius:4px;background:var(--surface-2);
+      color:var(--ink-3);white-space:nowrap}
+.badge{font:700 8.5px/1 var(--sans);letter-spacing:.09em;padding:3.5px 6px;border-radius:4px;
+       background:var(--surface-2);color:var(--ink-3)}
+.cname{font-size:12.5px;font-weight:660;line-height:1.2}
+.csub{font-size:10px;color:var(--ink-3);line-height:1.3;margin-top:1px}
+.cmet{font:10px/1.35 var(--mono);color:var(--ink-3);margin-top:4px;min-height:14px;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbar{height:4px;border-radius:3px;background:var(--surface-2);margin-top:4px;overflow:hidden;
+      display:none}
+.cbar i{display:block;height:100%;background:var(--live);width:0;transition:width .25s}
+.card.hasbar .cbar{display:block}
+
+.card.run{border-color:var(--live);background:var(--live-soft);
+          box-shadow:0 0 0 4px color-mix(in srgb,var(--live) 12%,transparent)}
+.card.run .ico{background:color-mix(in srgb,var(--live) 16%,transparent)}
+.card.run .ico svg{stroke:var(--live)}
+.card.run .badge{background:var(--live);color:#fff}
+.card.run .cmet{color:var(--live)}
+.card.done{border-color:var(--accent);background:var(--accent-soft)}
+.card.done .badge{background:var(--accent);color:#fff}
+.card.done .cmet{color:var(--ink-2)}
+.card.done .ico svg{stroke:var(--accent)}
+.card.skip{border-style:dashed;background:transparent;opacity:.62}
+.card.fail{border-color:var(--bad);background:var(--bad-soft)}
+.card.fail .badge{background:var(--bad);color:#fff}
+.card.fail .cmet{color:var(--bad)}
+.card.fail .ico svg{stroke:var(--bad)}
+.card.sel{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 32%,transparent)}
+.card.run.sel{box-shadow:0 0 0 4px color-mix(in srgb,var(--live) 28%,transparent)}
+
+.eg{fill:none;stroke:var(--idle);stroke-width:1.6;opacity:.75}
+.eg.on{stroke:var(--accent);opacity:1}
+.eg.flow{stroke:var(--live);stroke-width:2.6;stroke-dasharray:5 6;animation:march .55s linear infinite}
+@keyframes march{to{stroke-dashoffset:-11}}
+.eg.dim{opacity:.25;stroke-dasharray:3 5}
+
+/* ------------------------------------------------------- bottom workspace - */
+.work{flex:0 0 auto;background:var(--surface);border-top:1px solid var(--line);
+      display:flex;flex-direction:column;max-height:216px}
+.wtabs{display:flex;align-items:center;gap:2px;padding:0 10px;border-bottom:1px solid var(--line-soft)}
+.wtabs button{background:none;border:0;padding:8px 11px;font-size:12px;color:var(--ink-2);
+  cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.wtabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:640}
+.wtabs .rt{margin-left:auto;font:10.5px var(--mono);color:var(--ink-3);padding-right:6px}
+.wbody{padding:8px 14px 10px;overflow:auto;min-height:0;flex:1 1 auto}
+.tlrow{display:grid;grid-template-columns:118px 1fr 66px;align-items:center;gap:9px;
+       font-size:10.5px;color:var(--ink-2);height:17px}
+.tlrow .lab{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.tlrow .lab:hover{color:var(--ink);text-decoration:underline}
+.tltrack{position:relative;height:9px;background:var(--surface-2);border-radius:3px}
+.tlbar{position:absolute;top:0;bottom:0;border-radius:3px;background:var(--accent);min-width:2px}
+.tlbar.live{background:var(--live)}
+.tlrow .num{text-align:right;font:10.5px var(--mono);color:var(--ink-3);
+            font-variant-numeric:tabular-nums}
+.axis{display:grid;grid-template-columns:118px 1fr 66px;gap:9px;font:9.5px var(--mono);
+      color:var(--ink-3);margin-top:4px}
+.axis .ticks{display:flex;justify-content:space-between}
+svg.conv{width:100%;height:auto;display:block;max-height:144px}
+.conv .grid{stroke:var(--line-soft);stroke-width:1}
+.conv .bnd{fill:none;stroke:var(--live);stroke-width:2}
+.conv .inc{fill:none;stroke:var(--warm);stroke-width:2}
+.conv .fillgap{fill:var(--live);opacity:.10}
+.conv text{font:9.5px var(--mono);fill:var(--ink-3)}
+.lgd{display:flex;gap:14px;font-size:11px;color:var(--ink-2);margin-bottom:3px;flex-wrap:wrap}
+.lgd i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:5px}
+.stats{flex:0 0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(124px,1fr));gap:1px;
+  background:var(--line);border-top:1px solid var(--line)}
+.stat{background:var(--surface);padding:6px 11px}
+.stat .k{font:650 9px/1.3 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.stat .v{font:600 13.5px/1.3 var(--mono);margin-top:1px;overflow-wrap:anywhere}
+.stat .v.ok{color:var(--good)} .stat .v.warn{color:var(--warm)} .stat .v.bad{color:var(--bad)}
+
+/* ------------------------------------------------------------ right pane - */
+.console{background:var(--surface)}
+.ctabs{display:flex;gap:2px;padding:0 10px;border-bottom:1px solid var(--line-soft);flex:0 0 auto}
+.ctabs button{background:none;border:0;padding:9px 11px;font-size:12.5px;color:var(--ink-2);
+  cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.ctabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:640}
+.focus{flex:0 0 auto;padding:10px 14px 11px;border-bottom:1px solid var(--line-soft)}
+.focus .top{display:flex;align-items:flex-start;gap:8px}
+.focus h3{margin:0;font-size:13.5px;font-weight:660}
+.focus .sub{font-size:11px;color:var(--ink-3);margin-top:1px}
+.focus p{margin:8px 0 0;font-size:11.5px;line-height:1.55;color:var(--ink-2)}
+.kvgrid{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.kvchip{font:10px/1 var(--mono);padding:4px 6px;border-radius:5px;background:var(--surface-2);
+        color:var(--ink-2)}
+.kvchip b{color:var(--ink);font-weight:660}
+.cbarline{display:flex;align-items:center;gap:8px;padding:6px 14px;border-bottom:1px solid var(--line-soft);
+  font-size:11px;color:var(--ink-3);flex:0 0 auto}
+.cbarline button{background:none;border:1px solid var(--line);border-radius:5px;color:var(--ink-2);
+  font-size:10.5px;padding:2px 7px;cursor:pointer}
+.cbarline button.on{border-color:var(--accent);color:var(--accent)}
+.feed{padding:8px 12px 14px}
+.ev{margin-bottom:7px}
+.ev.dimmed{opacity:.22}
+.sys{font:10.5px/1.6 var(--mono);color:var(--ink-3)}
+.sys b{color:var(--ink-2);font-weight:600}
+.sys .cmd{color:var(--accent)}
+.evcard{border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--surface)}
+.evcard.stage{border-left:3px solid var(--live)}
+.evcard.stage.endev{border-left-color:var(--accent)}
+.evcard.stage.failev{border-left-color:var(--bad)}
+.evhead{display:flex;align-items:baseline;gap:7px;font-size:11px}
+.evhead .t{font:10px var(--mono);color:var(--ink-3);font-variant-numeric:tabular-nums}
+.evhead .n{font:660 10px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.evhead .s{font:700 8.5px var(--sans);letter-spacing:.09em;padding:2.5px 5px;border-radius:4px;
+           background:var(--live-soft);color:var(--live);margin-left:auto}
+.evcard.endev .evhead .s{background:var(--accent-soft);color:var(--accent)}
+.evcard.failev .evhead .s{background:var(--bad-soft);color:var(--bad)}
+.evwhat{font-size:11.5px;color:var(--ink);margin-top:3px;line-height:1.4}
+.payload{margin-top:6px;background:var(--code-bg);border-radius:6px;padding:6px 8px;
+         font:10.5px/1.6 var(--mono);color:var(--code-ink);word-break:break-word}
+.payload .k{color:var(--code-key)}
+.out{background:var(--surface-2);border-radius:7px;padding:6px 9px;font:10.5px/1.55 var(--mono);
+     color:var(--ink-2);white-space:pre-wrap;word-break:break-word}
+.out .oh{font:660 8.5px var(--sans);letter-spacing:.12em;text-transform:uppercase;
+         color:var(--ink-3);display:block;margin-bottom:3px}
+.res{border:1px solid color-mix(in srgb,var(--good) 45%,transparent);background:var(--good-soft);
+     border-radius:8px;padding:8px 10px}
+.res.bad{border-color:color-mix(in srgb,var(--bad) 45%,transparent);background:var(--bad-soft)}
+.res .h{font:700 8.5px var(--sans);letter-spacing:.11em;text-transform:uppercase;color:var(--good)}
+.res.bad .h{color:var(--bad)}
+.res .b{font:600 13px var(--mono);margin-top:2px}
+#raw{padding:8px 12px;font:10.5px/1.55 var(--mono);white-space:pre-wrap;word-break:break-word;
+     color:var(--ink-2)}
+table.cmp{width:100%;border-collapse:collapse;font-size:12px}
+table.cmp th,table.cmp td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--line-soft);
+  white-space:nowrap}
+table.cmp th:first-child,table.cmp td:first-child{text-align:left}
+table.cmp th{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
+table.cmp td.n{font-family:var(--mono);font-size:11.5px}
+.note{font-size:11px;color:var(--ink-3);line-height:1.55;padding:8px 0}
+.note.pad{padding:10px 14px}
+.err{margin:10px;padding:9px 11px;border-radius:7px;font-size:12px;background:var(--bad-soft);
+     border:1px solid color-mix(in srgb,var(--bad) 40%,transparent)}
+.hide{display:none !important}
+</style>
+</head>
+<body>
+
+<!-- ==================================================== the command bar === -->
+<div class="bar">
+  <div class="brand">
+    <span class="mark">IG</span>
+    <span><b>IGAOS</b><span>Solver Studio</span></span>
+  </div>
+
+  <div class="slot">
+    <span class="k">Active model</span>
+    <span class="v" id="activeModel">—</span>
+  </div>
+
+  <div class="chipbox">
+    <span class="k">Run</span>
+    <span class="state" id="runState">idle</span>
+  </div>
+  <div class="chipbox">
+    <span class="k">Phase</span>
+    <span class="state" id="phaseState">—</span>
+  </div>
+  <div class="chipbox">
+    <span class="k">Elapsed</span>
+    <span class="state" id="clock" style="font-family:var(--mono)">0.0 s</span>
+  </div>
+
+  <span class="grow"></span>
+
+  <button class="tbtn" id="btnReplay" disabled title="Replay the recorded event stream">↻ Replay</button>
+  <div class="seg" id="speedSeg" title="Replay speed">
+    <button data-k="1" aria-pressed="false" title="the real timings, exactly as recorded">1×</button>
+    <button data-k="8" aria-pressed="true" title="eight times slower, and never under five seconds">8× slower</button>
+    <button data-k="30" aria-pressed="false" title="thirty times slower, and never under fifteen seconds">30× slower</button>
+  </div>
+  <button class="tbtn" id="btnStop" disabled>■ Stop</button>
+  <button class="tbtn primary" id="btnRun">▶ Run solver</button>
+  <div class="envline" id="env">connecting…</div>
+</div>
+
+<main>
+  <!-- ============================================================ sidebar = -->
+  <div class="pane side">
+    <div class="hd">Model library</div>
+    <div class="scroll">
+      <div id="models"><div class="note pad" style="color:var(--nav-ink-2)">loading…</div></div>
+
+      <div class="group">Your own</div>
+      <button class="mdl" id="pasteToggle" aria-pressed="false">
+        <span class="n">Paste an MPS file <span class="kindtag">MPS</span></span>
+        <span class="m">written for CPLEX, Gurobi or Xpress — runs unchanged</span>
+      </button>
+      <div class="opts hide" id="pasteBox" style="border-top:0">
+        <textarea id="mps" spellcheck="false" placeholder="NAME          MYMODEL&#10;ROWS&#10; N  COST&#10;..."></textarea>
+      </div>
+
+      <div class="group" style="padding-top:14px">Solver options</div>
+      <div class="opts">
+        <label class="f">Algorithm
+          <select id="algorithm">
+            <option value="auto">let the solver choose</option>
+            <option value="primal">primal simplex</option>
+            <option value="dual">dual simplex</option>
+            <option value="interior">interior point</option>
+            <option value="pdhg">first-order (PDHG)</option>
+          </select>
+        </label>
+        <div class="two">
+          <label class="f">Time limit (s)
+            <input type="number" id="timeLimit" value="60" min="1" max="600" step="1"></label>
+          <label class="f">Threads
+            <input type="number" id="threads" value="0" min="0" max="16" step="1"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="cuts" checked> cut separation</label>
+        <label class="check"><input type="checkbox" id="presolve" checked> presolve</label>
+        <label class="check"><input type="checkbox" id="scaling" checked> scaling</label>
+        <label class="check"><input type="checkbox" id="crossover" checked> crossover</label>
+        <div class="two" style="margin-top:9px">
+          <button class="tbtn" id="btnCompare" style="justify-content:center">Cuts on/off</button>
+          <button class="tbtn" id="btnAlgos" style="justify-content:center">Four paths</button>
+          <button class="tbtn" id="btnDiag" style="justify-content:center">Diagnose</button>
+          <button class="tbtn" id="btnVerify" style="justify-content:center">Verify proof</button>
+          <button class="tbtn" id="btnSolution" style="justify-content:center">Show solution</button>
+        </div>
+        <button class="tbtn" id="btnTour" style="justify-content:center;width:100%;margin-top:7px"
+                title="Solve this model four times — primal, dual, interior point, first order — and light every card">
+          ▶▶ Every path, one after another</button>
+        <div class="hint">
+          Every switch here is passed to the binary, not to the page. Untick one and
+          its card goes dashed because the solver reported skipping it.
+          <br><br>
+          Exactly one of the four continuous methods runs per solve, so the other
+          three read <b>OTHER PATH</b> — idle, not missing. <b>Every path</b> runs
+          all four in turn on the same model so you can watch each one work.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= canvas = -->
+  <div class="pane canvas">
+    <div class="legend">
+      <span class="t">Solve pipeline · live execution</span>
+      <span class="k-idle"><i></i>idle</span>
+      <span class="k-run"><i></i>running</span>
+      <span class="k-done"><i></i>completed</span>
+      <span class="k-skip"><i></i>skipped / other path</span>
+      <span class="k-fail"><i></i>fell back</span>
+    </div>
+
+    <div class="flowwrap" id="flowwrap">
+      <svg id="edges"></svg>
+      <div class="lanes" id="lanes"></div>
+    </div>
+
+    <div class="work">
+      <div class="wtabs" role="tablist">
+        <button role="tab" data-w="tl" aria-selected="true">Where the time went</button>
+        <button role="tab" data-w="cv" aria-selected="false">Bound vs incumbent</button>
+        <span class="rt" id="workNote"></span>
+      </div>
+      <div class="wbody" id="w-tl"></div>
+      <div class="wbody hide" id="w-cv"></div>
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================ console = -->
+  <div class="pane console">
+    <div class="ctabs" role="tablist">
+      <button role="tab" data-c="feed" aria-selected="true">Execution console</button>
+      <button role="tab" data-c="raw" aria-selected="false">Raw stdout</button>
+      <button role="tab" data-c="cmp" aria-selected="false">Comparisons</button>
+      <button role="tab" data-c="diag" aria-selected="false">Diagnostics</button>
+      <button role="tab" data-c="sol" aria-selected="false">Solution</button>
+    </div>
+
+    <div class="focus" id="focus"></div>
+
+    <div class="cbarline" id="cbarline">
+      <span id="evCount">0 events</span>
+      <span class="grow" style="flex:1"></span>
+      <span id="filterLabel"></span>
+      <button id="clearFilter" class="hide">show all</button>
+      <button id="follow" class="on">follow</button>
+    </div>
+
+    <div class="scroll" id="feedWrap"><div class="feed" id="feed"></div></div>
+    <div class="scroll hide" id="rawWrap"><div id="raw"></div></div>
+    <div class="scroll hide" id="cmpWrap"><div class="note pad">
+      Run a comparison from the sidebar. Each one runs the binary again, to completion.
+    </div></div>
+    <div class="scroll hide" id="solWrap"><div class="note pad">
+      Press <b>Show solution</b>. A console that reports everything about a solve
+      except what it decided is a strange console — for a blending model these
+      values are the blend.
+    </div></div>
+    <div class="scroll hide" id="diagWrap"><div class="note pad">
+      Press <b>Diagnose</b>. On a solved linear model you get shadow prices — what one
+      more unit of each binding constraint is worth, and the range over which that price
+      holds. On an infeasible one you get the irreducible set of constraints in conflict.
+      Both are computed by the solver, not by this page.
+    </div></div>
+  </div>
+</main>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const el = (t,c,x)=>{const n=document.createElement(t); if(c)n.className=c;
+                     if(x!==undefined)n.textContent=x; return n;};
+const SVGNS="http://www.w3.org/2000/svg";
+const svgEl=(t,a)=>{const n=document.createElementNS(SVGNS,t);
+                    for(const k in (a||{})) n.setAttribute(k,a[k]); return n;};
+const fmt=(v,d=6)=> (v===undefined||v===null||v==="") ? "—"
+  : (typeof v==="number"
+      ? (Number.isInteger(v) ? v.toLocaleString()
+         : (Math.abs(v)>=1e-4 && Math.abs(v)<1e7 ? String(Number(v.toFixed(d)))
+                                                 : v.toExponential(3)))
+      : String(v));
+const secs=v=> (typeof v!=="number"||!isFinite(v)) ? "—"
+  : (v<1 ? (v*1000).toFixed(v<0.01?2:0)+" ms" : v.toFixed(v<10?2:1)+" s");
+
+/* ---------------------------------------------------------------- icons -- */
+const ICON = {
+  model:'<path d="M3 4h10M3 8h10M3 12h6"/>',
+  presolve:'<path d="M2 8h12M8 2v12"/><circle cx="8" cy="8" r="6"/>',
+  scaling:'<path d="M2 13L13 2M4 3v3M2.5 4.5h3M11 10v3M9.5 11.5h3"/>',
+  primal:'<path d="M2 13V3M2 13h11M4 10l3-4 3 2 3-5"/>',
+  dual:'<path d="M13 3v10M13 13H2M11 6L8 10 5 8 2 12"/>',
+  interior:'<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2"/><path d="M8 6V2"/>',
+  pdhg:'<path d="M2 11c2-6 4 6 6 0s4-6 6 0"/>',
+  crossover:'<path d="M3 13L13 3M3 3l10 10"/>',
+  cuts:'<path d="M2 12L12 2M6 2l8 8"/><circle cx="4" cy="4" r="2"/>',
+  tree:'<path d="M8 2v4M8 6L4 9v5M8 6l4 3v5"/><circle cx="8" cy="2" r="1.5"/>'
+       +'<circle cx="4" cy="14" r="1.5"/><circle cx="12" cy="14" r="1.5"/>',
+  postsolve:'<path d="M2 8l4 4 8-9"/>',
+};
+const icoSvg = id => '<svg viewBox="0 0 16 16">'+(ICON[id]||"")+'</svg>';
+
+/* ------------------------------------------------------- the pipeline map -
+   Three lanes, because that is the actual shape of the code: everything runs
+   the preparation lane, exactly one of the four continuous methods runs, and
+   the mixed-integer lane only exists when the model has integer columns.    */
+const NODES = [
+  {id:"model", t:"Read model", sub:"MPS parser → sparse matrix",
+   what:"Parse the file into a sparse matrix, column bounds, row ranges and, if the objective is quadratic, the Hessian from QUADOBJ.",
+   fields:[["rows","rows"],["cols","columns"],["nnz","nonzeros"],["int","integer columns"]]},
+  {id:"presolve", t:"Presolve", sub:"reductions + bound propagation",
+   what:"Remove empty and fixed columns, singleton and redundant rows, propagate bounds. Quadratic columns are held back from every reduction that assumes a linear objective — writing one that did not was bug 14, and deleting rather than substituting them was bug 15.",
+   fields:[["rows","rows removed"],["cols","columns removed"],["nnz","nonzeros removed"],["tightened","bounds tightened"],["t","seconds"]]},
+  {id:"scaling", t:"Scaling", sub:"power-of-two equilibration",
+   what:"Equilibrate row and column magnitudes so the factorizations see a better-conditioned matrix. Powers of two only, so scaling introduces no rounding error of its own.",
+   fields:[["t","seconds"]]},
+
+  {id:"primal", t:"Primal simplex", sub:"Harris ratio test · sparse LU",
+   what:"Bounded-variable revised simplex: Harris two-pass ratio test, bound flipping, Devex pricing, and a sparse LU with threshold Markowitz pivoting behind it. On a mixed-integer model this is what solves the root relaxation.",
+   fields:[["iters","iterations"],["pinf","primal infeasibility"],["t","seconds"]]},
+  {id:"dual", t:"Dual simplex", sub:"steepest edge · warm start",
+   what:"Dual steepest-edge pricing with the Forrest–Goldfarb update. Branch and bound warm starts from it at every node, which is why it matters more than its share of the source.",
+   fields:[["iters","iterations"],["pinf","primal infeasibility"],["t","seconds"]]},
+  {id:"interior", t:"Interior point", sub:"Mehrotra · augmented KKT",
+   what:"Mehrotra predictor–corrector on the augmented KKT system — not the normal equations, which go dense the moment Q is not diagonal and so cannot serve QP at all. Quasi-definite LDLᵀ under an AMD ordering.",
+   fields:[["iters","IPM iterations"],["factornnz","factor nonzeros"],["t","seconds"]]},
+  {id:"pdhg", t:"First-order", sub:"restarted PDHG · matrix-free",
+   what:"Restarted primal–dual hybrid gradient: one Ax, one Aᵀy and elementwise work per iteration, no factorization anywhere. This is the algorithm the CUDA kernels implement.",
+   fields:[["iters","iterations"],["restarts","restarts"],["t","seconds"]]},
+  {id:"crossover", t:"Crossover", sub:"interior point → basis",
+   what:"Turn an interior or first-order point into a genuine basic solution, so branch and bound has something to warm start from and the reduced costs mean what they say.",
+   fields:[["pushes","pushes"],["iters","simplex iterations"],["t","seconds"]]},
+
+  {id:"cuts", t:"Cut separation", sub:"GMI · cover · MIR, at the root",
+   what:"Gomory mixed-integer, knapsack cover and complemented-MIR cuts at the root, screened by a pool on efficacy, density and dynamism. Root only, and that is a validity decision rather than a shortcut: a cut read off locally tightened bounds is sound only inside that subtree.",
+   fields:[["kept","cuts kept"],["gomory","gomory"],["cover","cover"],["mir","MIR"],["rounds","rounds"],["before","root bound before"],["after","root bound after"],["t","seconds"]]},
+  {id:"tree", t:"Branch and bound", sub:"pseudocost · plunge · best bound",
+   what:"Pseudocost branching with a reliability phase, hybrid plunging and best-bound selection, plus diving heuristics. For a quadratic objective the node relaxation is the QP rather than the LP, and there is no cutting on that path because a Gomory cut needs a simplex tableau the interior-point method never forms.",
+   fields:[["nodes","nodes explored"],["bound","best bound"],["incumbent","incumbent"],["open","open nodes"],["gap","relative gap"],["threads","threads"],["t","seconds"]]},
+  {id:"global", t:"Spatial branch & bound", sub:"McCormick relaxations · bound tightening",
+   what:"Nonconvex quadratic constraints — blend quality times flow, the pooling problem — solved to PROVEN global optimality. Each bilinear product is relaxed by its McCormick envelope, the bounds are tightened, and the box is split until the relaxation and the incumbent meet. Every other model in this library linearises that product on a volume basis; this path does not have to.",
+   fields:[["products","bilinear products"],["nodes","nodes explored"],["bound","best bound"],["incumbent","incumbent"],["t","seconds"]]},
+  {id:"postsolve", t:"Postsolve + cleanup", sub:"undo reductions · rebuild basis",
+   what:"Undo presolve, reconstruct a full basis, then re-solve the original problem from it. Normally zero iterations, and it doubles as an independent check that the whole reduction chain preserved the optimum.",
+   fields:[["t","seconds"]]},
+];
+const LANES = [
+  {cap:"preparation — every model", rows:[["model","presolve","scaling"]]},
+  {cap:"continuous solve — exactly one of these four runs",
+   rows:[["primal","dual","interior","pdhg"],["crossover"]]},
+  {cap:"mixed integer — only when the model has integer columns",
+   rows:[["cuts"],["tree"]]},
+  {cap:"global optimization — only when a row carries a bilinear product",
+   rows:[["global"]]},
+  {cap:"", rows:[["postsolve"]]},
+];
+const EDGES = [
+  ["model","presolve"],["presolve","scaling"],
+  ["scaling","primal"],["scaling","dual"],["scaling","interior"],["scaling","pdhg"],
+  ["interior","crossover"],["pdhg","crossover"],
+  ["primal","cuts"],["dual","cuts"],["crossover","cuts"],
+  ["cuts","tree"],["tree","postsolve"],
+  ["scaling","global"],["global","postsolve"],
+];
+const CONT=["primal","dual","interior","pdhg"];
+const byId={}; NODES.forEach(n=>byId[n.id]=n);
+// "SKIPPED" and "OTHER PATH" are different facts, and they were once the same
+// badge -- which made three quarters of the solver look broken on every run.
+// A stage switched off in the sidebar is SKIPPED. A stage that exists and works
+// but is not the route this model takes is OTHER PATH: idle because another
+// card is doing that job. Only one of the four continuous methods ever runs.
+const BADGE={"":"IDLE",run:"RUNNING",done:"DONE",skip:"SKIPPED",
+             alt:"OTHER PATH",fail:"FELL BACK"};
+
+/* ------------------------------------------------------------------ state */
+let MODELS=[], picked=null, pickedName="", paste=false, es=null;
+let selected=null, stageData={}, state={}, spans={}, series=[], evs=[];
+let follow=true, activeStage="model";
+let REC=[], replayTimers=[], replaying=false, clockTimer=null, t0=0, speed=8;
+
+/* ------------------------------------------------------------ build cards */
+function buildFlow(){
+  const host=$("#lanes"); host.textContent="";
+  LANES.forEach(L=>{
+    const lane=el("div","lane");
+    if (L.cap) lane.append(el("div","cap",L.cap));
+    L.rows.forEach(ids=>{
+      const r=el("div","rowc"+(ids.length===3?" three":ids.length>3?" four":""));
+      ids.forEach(id=>{
+        const n=byId[id];
+        const c=el("button","card"); c.type="button"; c.id="c-"+id; c.dataset.id=id;
+        c.innerHTML =
+          '<div class="chead"><span class="ico">'+icoSvg(id)+'</span>'
+          + '<span class="chips"><span class="badge">IDLE</span></span></div>'
+          + '<div class="cname"></div><div class="csub"></div>'
+          + '<div class="cmet">—</div><div class="cbar"><i></i></div>';
+        c.querySelector(".cname").textContent=n.t;
+        c.querySelector(".csub").textContent=n.sub;
+        c.onclick=()=>select(id);
+        r.append(c);
+      });
+      lane.append(r);
+    });
+    host.append(lane);
+  });
+  requestAnimationFrame(drawEdges);
+}
+function drawEdges(){
+  const svg=$("#edges"), wrap=$("#flowwrap");
+  if(!svg||!wrap) return;
+  const W=Math.max(wrap.scrollWidth, wrap.clientWidth);
+  const H=Math.max(wrap.scrollHeight, wrap.clientHeight);
+  svg.setAttribute("viewBox","0 0 "+W+" "+H);
+  svg.setAttribute("width",W); svg.setAttribute("height",H);
+  svg.style.width=W+"px"; svg.style.height=H+"px";
+  svg.textContent="";
+  const base=wrap.getBoundingClientRect();
+  const sx=wrap.scrollLeft, sy=wrap.scrollTop;
+  const at=id=>{const e=document.getElementById("c-"+id); if(!e) return null;
+    const r=e.getBoundingClientRect();
+    return {l:r.left-base.left+sx, t:r.top-base.top+sy, w:r.width, h:r.height};};
+  EDGES.forEach(([a,b])=>{
+    const A=at(a), B=at(b); if(!A||!B) return;
+    let d;
+    if (Math.abs((A.t+A.h/2)-(B.t+B.h/2)) < 18 && B.l > A.l){
+      // same row, left to right: a short horizontal hop rather than a loop
+      const y=A.t+A.h/2, x1=A.l+A.w, x2=B.l, mx=(x1+x2)/2;
+      d="M"+x1+","+y+" C"+mx+","+y+" "+mx+","+y+" "+x2+","+y;
+    } else {
+      const x1=A.l+A.w/2, y1=A.t+A.h, x2=B.l+B.w/2, y2=B.t, my=(y1+y2)/2;
+      d=(Math.abs(x1-x2)<1) ? "M"+x1+","+y1+" L"+x2+","+y2
+        : "M"+x1+","+y1+" C"+x1+","+my+" "+x2+","+my+" "+x2+","+y2;
+    }
+    svg.append(svgEl("path",{d:d, class:"eg "+(edgeState[a+">"+b]||""),
+                             "data-edge":a+">"+b}));
+  });
+}
+let edgeState={};
+function edgeInto(id,cls){
+  EDGES.forEach(([a,b])=>{ if(b===id) edgeState[a+">"+b]=cls; });
+  document.querySelectorAll('[data-edge$=">'+id+'"]')
+          .forEach(p=>p.setAttribute("class","eg "+cls));
+}
+let rt=null;
+addEventListener("resize",()=>{ clearTimeout(rt); rt=setTimeout(drawEdges,120); });
+$("#flowwrap").addEventListener("scroll",()=>{ clearTimeout(rt); rt=setTimeout(drawEdges,120); });
+
+function setCard(id, cls){
+  const c=document.getElementById("c-"+id); if(!c) return;
+  state[id]=cls;
+  // "alt" shares the dashed styling of "skip" but carries its own badge.
+  const css = (cls==="alt") ? "skip" : cls;
+  c.className="card"+(css?" "+css:"")+(selected===id?" sel":"");
+  c.querySelector(".badge").textContent=BADGE[cls]||"IDLE";
+}
+function setMetric(id, text){
+  const c=document.getElementById("c-"+id);
+  if(c) c.querySelector(".cmet").textContent=text;
+}
+function setBar(id, frac){
+  const c=document.getElementById("c-"+id); if(!c) return;
+  if(frac===null||frac===undefined||!isFinite(frac)){ c.classList.remove("hasbar"); return; }
+  c.classList.add("hasbar");
+  c.querySelector(".cbar i").style.width=Math.max(0,Math.min(1,frac))*100+"%";
+}
+
+/* ------------------------------------------------------------- the models */
+fetch("/api/env").then(r=>r.json()).then(e=>{
+  $("#env").innerHTML = e.version
+    ? e.version+"<br>"+e.binary
+    : "no solver binary found — build it first";
+}).catch(()=>{ $("#env").textContent="console unreachable"; });
+
+const KINDNOTE={LP:"Linear",QP:"Convex quadratic",MILP:"Mixed integer linear",
+                MIQP:"Mixed integer quadratic"};
+fetch("/api/models").then(r=>r.json()).then(ms=>{
+  MODELS=ms; const box=$("#models"); box.textContent="";
+  let lastKind=null;
+  ms.slice().sort((a,b)=>["LP","QP","MILP","MIQP"].indexOf(a.kind)
+                        -["LP","QP","MILP","MIQP"].indexOf(b.kind))
+    .forEach(m=>{
+    if (m.kind!==lastKind){ box.append(el("div","group", KINDNOTE[m.kind]||m.kind)); lastKind=m.kind; }
+    const b=el("button","mdl"); b.type="button"; b.title=m.blurb||"";
+    const n=el("span","n"); n.append(m.name+" ");
+    const t=el("span","kindtag "+m.kind); t.textContent=m.kind; n.append(t);
+    if (m.runtime && m.runtime!=="instant"){
+      const c=el("span","slow"); c.textContent=m.runtime; n.append(c);
+    }
+    b.append(n, el("span","m",
+      m.rows.toLocaleString()+" × "+m.cols.toLocaleString()+" · "+m.nnz.toLocaleString()+" nnz"
+      + (m.nint?" · "+m.nint.toLocaleString()+" int":"")
+      + (m.nquad?" · "+m.nquad.toLocaleString()+" quad":"")));
+    b.onclick=()=>pick(m,b);
+    box.append(b);
+    if (m.id==="uc_m") setTimeout(()=>pick(m,b),0);
+  });
+});
+function pick(m,b){
+  picked=m.id; pickedName=m.name; paste=false;
+  $("#pasteBox").classList.add("hide");
+  $("#pasteToggle").setAttribute("aria-pressed","false");
+  document.querySelectorAll("#models .mdl").forEach(x=>x.setAttribute("aria-pressed","false"));
+  b.setAttribute("aria-pressed","true");
+  $("#activeModel").textContent = m.name+"  ·  "+m.kind+"  ·  "
+    + m.rows.toLocaleString()+"×"+m.cols.toLocaleString();
+}
+$("#pasteToggle").onclick=()=>{
+  paste=true; $("#pasteBox").classList.remove("hide");
+  $("#pasteToggle").setAttribute("aria-pressed","true");
+  document.querySelectorAll("#models .mdl").forEach(x=>x.setAttribute("aria-pressed","false"));
+  $("#activeModel").textContent="pasted MPS model";
+  $("#mps").focus();
+};
+
+/* -------------------------------------------------------------- the tabs -- */
+document.querySelectorAll(".ctabs button").forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll(".ctabs button").forEach(x=>x.setAttribute("aria-selected","false"));
+    b.setAttribute("aria-selected","true");
+    const w=b.dataset.c;
+    $("#feedWrap").classList.toggle("hide", w!=="feed");
+    $("#rawWrap").classList.toggle("hide",  w!=="raw");
+    $("#cmpWrap").classList.toggle("hide",  w!=="cmp");
+    $("#diagWrap").classList.toggle("hide", w!=="diag");
+    $("#solWrap").classList.toggle("hide",  w!=="sol");
+    $("#cbarline").classList.toggle("hide", w==="cmp"||w==="diag"||w==="sol");
+  };
+});
+function ctab(which){ document.querySelector('.ctabs [data-c="'+which+'"]').click(); }
+document.querySelectorAll(".wtabs button").forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll(".wtabs button").forEach(x=>x.setAttribute("aria-selected","false"));
+    b.setAttribute("aria-selected","true");
+    $("#w-tl").classList.toggle("hide", b.dataset.w!=="tl");
+    $("#w-cv").classList.toggle("hide", b.dataset.w!=="cv");
+  };
+});
+function wtab(which){ document.querySelector('.wtabs [data-w="'+which+'"]').click(); }
+$("#follow").onclick=()=>{ follow=!follow; $("#follow").classList.toggle("on",follow);
+  if(follow) $("#feedWrap").scrollTop=$("#feedWrap").scrollHeight; };
+$("#clearFilter").onclick=()=>select(null);
+$("#speedSeg").querySelectorAll("button").forEach(b=>{
+  b.onclick=()=>{ speed=Number(b.dataset.k);
+    $("#speedSeg").querySelectorAll("button").forEach(x=>
+      x.setAttribute("aria-pressed", String(x===b))); };
+});
+
+/* ==================================================== the execution feed == */
+/* The first-order path at -vv prints a line every 64 iterations, which on a
+   large LP is thousands of lines in seconds. Appending each one on arrival --
+   and scrolling after each -- forces a layout per line and locks the page up.
+   So every append goes through a buffer that is flushed once per frame, and
+   the feed is trimmed from the front once it is longer than anyone will read.
+   The Raw stdout tab keeps far more, since that is what it is for.          */
+const MAX_EVENTS = 1400, TRIM_TO = 1000, MAX_RAW_LINES = 40000;
+let pendingScroll=false, rawLines=0, trimmedEvents=0, trimNote=null;
+function scheduleScroll(){
+  if (pendingScroll || !follow) return;
+  pendingScroll=true;
+  requestAnimationFrame(()=>{ pendingScroll=false;
+    const w=$("#feedWrap"); w.scrollTop=w.scrollHeight; });
+}
+function trimFeed(){
+  if (evs.length <= MAX_EVENTS) return;
+  const drop = evs.length - TRIM_TO;
+  for (let i=0;i<drop;i++) evs[i].remove();
+  evs = evs.slice(drop);
+  trimmedEvents += drop;
+  if (!trimNote){ trimNote=el("div","sys"); $("#feed").prepend(trimNote); }
+  trimNote.textContent = "… "+trimmedEvents.toLocaleString()
+    + " earlier events trimmed from this view — all of them are on the Raw stdout tab";
+}
+function push(node, stageId){
+  node.classList.add("ev");
+  node.dataset.stage = stageId || activeStage;
+  if (selected && node.dataset.stage!==selected) node.classList.add("dimmed");
+  $("#feed").append(node);
+  evs.push(node);
+  trimFeed();
+  $("#evCount").textContent = evs.length + (evs.length===1?" event":" events")
+    + (trimmedEvents?" (+"+trimmedEvents.toLocaleString()+" trimmed)":"");
+  scheduleScroll();
+}
+let rawBuf=[], rawFlush=false;
+function pushRaw(line){
+  rawBuf.push(line);
+  if (rawFlush) return;
+  rawFlush=true;
+  requestAnimationFrame(()=>{
+    rawFlush=false;
+    if (!rawBuf.length) return;
+    rawLines += rawBuf.length;
+    $("#raw").append(document.createTextNode(rawBuf.join("\n")+"\n"));
+    rawBuf.length=0;
+    if (rawLines > MAX_RAW_LINES){        // a hard stop, so memory cannot run away
+      const t=$("#raw").textContent;
+      const keep=t.slice(t.length>>1);
+      $("#raw").textContent="… earlier output dropped after "
+        + MAX_RAW_LINES.toLocaleString()+" lines …\n"+keep;
+      rawLines = MAX_RAW_LINES>>1;
+    }
+  });
+}
+function sysLine(t, tag, text, cls){
+  const d=el("div","sys");
+  d.append(el("span","t","["+t+"] "));
+  const b=el("b"); b.textContent="["+tag+"] "; d.append(b);
+  const s=el("span",cls||null,text); d.append(s);
+  push(d);
+}
+const STAGE_TITLE={
+  model:"Read model", presolve:"Presolve", scaling:"Scaling",
+  primal:"Primal simplex", dual:"Dual simplex", interior:"Interior point",
+  pdhg:"First-order PDHG", crossover:"Crossover", cuts:"Cut separation",
+  tree:"Branch and bound", postsolve:"Postsolve", solve:"Solve", done:"Finished",
+};
+const SAYS = {
+  "model|end":       d=>"Parsed "+fmt(d.rows)+" rows × "+fmt(d.cols)+" columns, "+fmt(d.nnz)
+                        +" nonzeros"+(d.int?", "+fmt(d.int)+" of them integer":""),
+  "presolve|begin":  ()=>"Reducing the model before anything expensive touches it.",
+  "presolve|end":    d=>"Removed "+fmt(d.rows)+" rows and "+fmt(d.cols)+" columns, tightened "
+                        +fmt(d.tightened)+" bounds.",
+  "presolve|skip":   ()=>"Switched off — the solver is working on the model as written.",
+  "scaling|begin":   ()=>"Equilibrating row and column magnitudes.",
+  "scaling|end":     ()=>"Scaled. Powers of two only, so no rounding was introduced.",
+  "scaling|skip":    ()=>"Switched off — the matrix goes to the factorization unscaled.",
+  "solve|begin":     d=>"Dispatching to the "+String(d.kind||"").toUpperCase()+" path.",
+  "solve|end":       d=>"Reduced problem solved: "+d.status+" at "+fmt(d.obj,9)+".",
+  "primal|begin":    d=>d.root?"Solving the root relaxation with the primal simplex."
+                             :"Primal simplex starting.",
+  "primal|end":      d=>fmt(d.iters)+" iterations, "+d.status+".",
+  "dual|begin":      d=>d.node?"Node relaxations from here on are warm-started dual re-solves."
+                             :"Dual simplex starting.",
+  "dual|end":        d=>fmt(d.iters)+" iterations across the tree, "+d.status+".",
+  "interior|begin":  d=>d.node?"Every node relaxation from here is a convex QP solved by the "
+                              +"interior point method — there is no tableau on this path."
+                        : d.qp?"Interior point on the augmented KKT system — the objective is quadratic."
+                             :"Interior point starting.",
+  "interior|end":    d=>d.node?fmt(d.iters)+" node relaxations solved."
+                             :fmt(d.iters)+" iterations, factor holds "+fmt(d.factornnz)+" nonzeros.",
+  "pdhg|begin":      ()=>"Matrix-free first-order iterations — no factorization at all.",
+  "pdhg|end":        d=>fmt(d.iters)+" iterations with "+fmt(d.restarts)+" restarts, "+d.status+".",
+  "crossover|begin": ()=>"Pushing the interior point onto a vertex.",
+  "crossover|end":   d=>fmt(d.pushes)+" pushes and "+fmt(d.iters)+" simplex iterations to a basis.",
+  "crossover|skip":  d=>d.qp?"Not run: a QP optimum need not sit at a vertex."
+                            :"Switched off — the interior point is reported as it stands.",
+  "cuts|begin":      ()=>"Separating Gomory, cover and MIR cuts at the root.",
+  "cuts|end":        d=>"Kept "+fmt(d.kept)+" cuts over "+fmt(d.rounds)+" rounds; root bound "
+                        +fmt(d.before,8)+" → "+fmt(d.after,8)+".",
+  "cuts|skip":       ()=>"Switched off — the tree gets the raw relaxation.",
+  "tree|begin":      d=>"Searching from a root bound of "+fmt(d.rootbound,9)+".",
+  "tree|node":       d=>fmt(d.nodes)+" nodes, "+fmt(d.open)+" still open"
+                        +(typeof d.gap==="number"&&d.gap>=0?", gap "+(d.gap*100).toFixed(3)+"%":""),
+  "tree|end":        d=>"Tree closed after "+fmt(d.nodes)+" node"+(d.nodes===1?"":"s")+".",
+  "postsolve|begin": ()=>"Undoing the reductions and rebuilding a basis for the original model.",
+  "postsolve|end":   ()=>"Original problem re-solved from the reconstructed basis.",
+  "done|end":        d=>"Finished: "+d.status+", objective "+fmt(d.obj,10)+".",
+};
+function stageCard(d){
+  const key=d.name+"|"+d.state;
+  const isEnd = d.state==="end", isSkip = d.state==="skip";
+  const failed = d.data && d.data.status && d.data.status!=="optimal" && d.data.status!=="feasible";
+  const c=el("div","evcard stage"+(isEnd?" endev":"")+(failed?" failev":""));
+  const h=el("div","evhead");
+  h.append(el("span","t",d.at.toFixed(3)+"s"),
+           el("span","n",STAGE_TITLE[d.name]||d.name),
+           el("span","s", isSkip?"SKIPPED":d.state.toUpperCase()));
+  c.append(h);
+  const says = SAYS[key];
+  if (says) c.append(el("div","evwhat", says(d.data||{})));
+  const keys=Object.keys(d.data||{});
+  if (keys.length){
+    const p=el("div","payload");
+    keys.forEach((k,i)=>{
+      p.append(el("span","k",k), document.createTextNode("="
+        + (typeof d.data[k]==="number" ? fmt(d.data[k],8) : d.data[k])
+        + (i<keys.length-1 ? "  " : "")));
+    });
+    c.append(p);
+  }
+  push(c, byId[d.name] ? d.name : activeStage);
+}
+let outBlock=null, outBuf=[], outFlush=false;
+function flushOut(){
+  outFlush=false;
+  if (!outBuf.length) return;
+  if (!outBlock || !outBlock.isConnected || outBlock.dataset.stage!==activeStage){
+    outBlock=el("div","evcard"); const w=el("div","out");
+    w.append(el("span","oh","solver output"));
+    outBlock.append(w); outBlock._body=w;
+    push(outBlock);
+  }
+  outBlock._body.append(document.createTextNode(outBuf.join("\n")+"\n"));
+  outBuf.length=0;
+  scheduleScroll();
+}
+function outLine(line){
+  pushRaw(line);
+  outBuf.push(line);
+  if (!outFlush){ outFlush=true; requestAnimationFrame(flushOut); }
+}
+function resultCard(r){
+  const c=el("div","res"+(r.status==="optimal"?"":" bad"));
+  c.append(el("div","h", r.status==="optimal" ? "proven optimal" : String(r.status)));
+  c.append(el("div","b", fmt(r.obj,10)));
+  const g=el("div","kvgrid");
+  [["iterations",fmt(r.iters)],["nodes",fmt(r.nodes)],["time",secs(r.time)],
+   ["primal infeas",fmt(r.pinf)],["cuts",fmt(r.cuts)]]
+   .forEach(kv=>{ if(kv[1]!=="—"){ const s=el("span","kvchip");
+     s.append(el("b",null,kv[1]), document.createTextNode(" "+kv[0])); g.append(s);} });
+  c.append(g);
+  push(c);
+}
+function applyFilter(){
+  evs.forEach(n=>n.classList.toggle("dimmed", !!selected && n.dataset.stage!==selected));
+}
+
+/* --------------------------------------------------------- the focus card */
+function renderFocus(){
+  const f=$("#focus"); f.textContent="";
+  if (!selected){
+    const top=el("div","top");
+    const i=el("span","ico"); i.innerHTML=icoSvg("model");
+    const box=el("div");
+    box.append(el("h3",null,"Solve pipeline"),
+               el("div","sub","click any card to inspect that phase"));
+    top.append(i,box); f.append(top);
+    f.append(el("p",null,"Every card lights up because the solver reported entering that "
+      + "phase, on stdout, while it ran. Nothing here is on a timer and nothing is "
+      + "replayed from a recording — if the solver stalls, the page stalls with it."));
+    return;
+  }
+  const n=byId[selected], data=stageData[selected]||{};
+  const top=el("div","top");
+  const i=el("span","ico"); i.innerHTML=icoSvg(n.id);
+  const box=el("div"); box.append(el("h3",null,n.t), el("div","sub",n.sub));
+  const st=el("span","state "+({run:"run",done:"ok",skip:"",alt:"",fail:"bad"}[state[selected]]||""));
+  st.textContent=BADGE[state[selected]||""]; st.style.marginLeft="auto";
+  top.append(i,box,st); f.append(top);
+  f.append(el("p",null,n.what));
+  const kvs=n.fields.filter(kv=>data[kv[0]]!==undefined && data[kv[0]]!==-1);
+  if (kvs.length){
+    const g=el("div","kvgrid");
+    kvs.forEach(kv=>{ const s=el("span","kvchip");
+      s.append(el("b",null, kv[0]==="t"?secs(data[kv[0]]):fmt(data[kv[0]])),
+               document.createTextNode(" "+kv[1])); g.append(s); });
+    f.append(g);
+  } else if (state[selected]==="skip"){
+    f.append(el("p",null,"Switched off for this run in the sidebar. Tick it and run "
+                       + "again to see what it does."));
+  } else if (state[selected]==="alt"){
+    f.append(el("p",null,"Implemented and working — it is simply not the route this "
+                       + "model took. Exactly one of the four continuous methods runs "
+                       + "per solve. Choose it in the sidebar, or press Every path to "
+                       + "run all four on this model one after another."));
+  }
+}
+function select(id){
+  selected = (selected===id) ? null : id;
+  NODES.forEach(n=>setCard(n.id, state[n.id]||""));
+  $("#clearFilter").classList.toggle("hide", !selected);
+  $("#filterLabel").textContent = selected ? ("only "+byId[selected].t) : "";
+  applyFilter(); renderFocus();
+  if (selected) ctab("feed");
+}
+
+/* --------------------------------------------------------- the work panel */
+function renderTimeline(){
+  const b=$("#w-tl"); b.textContent="";
+  const rows=NODES.map(n=>({n,s:spans[n.id]})).filter(r=>r.s);
+  if(!rows.length){
+    b.append(el("div","note","Run a model. Every phase gets a bar as long as the time it "
+                           + "actually took, measured around the solver's own events."));
+    return;
+  }
+  const total=Math.max.apply(null, rows.map(r=>r.s.end).concat([1e-6]));
+  rows.forEach(o=>{
+    const row=el("div","tlrow");
+    const lab=el("div","lab",o.n.t); lab.onclick=()=>select(o.n.id); row.append(lab);
+    const tr=el("div","tltrack");
+    const bar=el("div","tlbar"+(o.s.live?" live":""));
+    const l=100*o.s.begin/total, w=Math.max(0.7,100*(o.s.end-o.s.begin)/total);
+    bar.style.left=l+"%"; bar.style.width=Math.min(w,Math.max(0.7,100-l))+"%";
+    bar.title=o.n.t+": "+secs(o.s.end-o.s.begin);
+    tr.append(bar); row.append(tr, el("div","num",secs(o.s.end-o.s.begin)));
+    b.append(row);
+  });
+  const ax=el("div","axis"); ax.append(el("div"));
+  const tk=el("div","ticks");
+  [0,.25,.5,.75,1].forEach(f=>tk.append(el("span",null,secs(total*f))));
+  ax.append(tk, el("div")); b.append(ax);
+}
+function renderConv(){
+  const b=$("#w-cv"); b.textContent="";
+  const nodes=(stageData.tree||{}).nodes;
+  if (series.length<3){
+    b.append(el("div","note",
+      (nodes!==undefined && nodes<=1)
+        ? "Proven at the root: one node, no gap left for the tree to close. That is what "
+        + "the cut separation above it bought — untick cut separation in the sidebar and "
+        + "run again to see the tree this model needs without it."
+      : nodes!==undefined
+        ? "The tree finished in "+fmt(nodes)+" nodes, faster than the fifth-of-a-second "
+        + "heartbeat could sample it. Pick a model that runs for longer, or untick cut "
+        + "separation, to watch the bound and the incumbent close."
+        : "For a mixed-integer model this plots the best bound climbing and the incumbent "
+        + "falling until they meet, which is what proving optimality looks like."));
+    return;
+  }
+  const lg=el("div","lgd");
+  const mk=(c,t)=>{const s=el("span"); const i=el("i"); i.style.background=c;
+                   s.append(i,document.createTextNode(t)); return s;};
+  const gapEl=el("span");
+  lg.append(mk("var(--live)","best bound"), mk("var(--warm)","incumbent"), gapEl);
+  b.append(lg);
+
+  // A fixed drawing box whose aspect matches the pane, so xMidYMid meet scales
+  // it to the full width instead of letterboxing it into the middle. Measuring
+  // the pane is not an option: it is display:none while the other tab is up.
+  const Wd=820, Hd=126, P={l:78,r:10,t:8,b:19};
+  const ts=series.map(p=>p.t);
+  const vals=series.reduce((a,p)=>{
+    if(typeof p.bound==="number"&&isFinite(p.bound)) a.push(p.bound);
+    if(typeof p.inc==="number"&&isFinite(p.inc)) a.push(p.inc); return a; },[]);
+  if(!vals.length){ b.append(el("div","note","No bounds reported yet.")); return; }
+  const tHi=Math.max.apply(null,ts), tLo=Math.min.apply(null,ts);
+  let vmin=Math.min.apply(null,vals), vmax=Math.max.apply(null,vals);
+  if(vmax-vmin<1e-12){ const e=Math.max(1e-9,Math.abs(vmax)*1e-6); vmax+=e; vmin-=e; }
+  const pad=(vmax-vmin)*0.10; vmin-=pad; vmax+=pad;
+  const X=t=>P.l+(Wd-P.l-P.r)*((t-tLo)/Math.max(1e-9,tHi-tLo));
+  const Y=v=>P.t+(Hd-P.t-P.b)*(1-(v-vmin)/(vmax-vmin));
+  const svg=svgEl("svg",{class:"conv",viewBox:"0 0 "+Wd+" "+Hd,
+    preserveAspectRatio:"xMidYMid meet",role:"img",
+    "aria-label":"best bound and incumbent against elapsed time"});
+  [0,.5,1].forEach(f=>{
+    const v=vmin+(vmax-vmin)*f,y=Y(v);
+    svg.append(svgEl("line",{x1:P.l,y1:y,x2:Wd-P.r,y2:y,class:"grid"}));
+    const tx=svgEl("text",{x:P.l-6,y:y+3,"text-anchor":"end"}); tx.textContent=fmt(v,4);
+    svg.append(tx);
+  });
+  const bp=series.filter(p=>typeof p.bound==="number"&&isFinite(p.bound));
+  const ip=series.filter(p=>typeof p.inc==="number"&&isFinite(p.inc));
+  if(bp.length>1&&ip.length>1)
+    svg.append(svgEl("polygon",{class:"fillgap",
+      points: bp.map(p=>X(p.t)+","+Y(p.bound)).join(" ")+" "
+            + ip.slice().reverse().map(p=>X(p.t)+","+Y(p.inc)).join(" ")}));
+  if(bp.length) svg.append(svgEl("polyline",{class:"bnd",
+      points:bp.map(p=>X(p.t)+","+Y(p.bound)).join(" ")}));
+  if(ip.length) svg.append(svgEl("polyline",{class:"inc",
+      points:ip.map(p=>X(p.t)+","+Y(p.inc)).join(" ")}));
+  [[tLo,"start"],[tHi,"end"]].forEach(o=>{
+    const tx=svgEl("text",{x:X(o[0]),y:Hd-5,"text-anchor":o[1]});
+    tx.textContent=secs(o[0]); svg.append(tx);
+  });
+  b.append(svg);
+  const last=series[series.length-1];
+  gapEl.textContent=(typeof last.gap==="number"&&last.gap>=0)
+    ? "gap "+(last.gap===0?"closed"
+        : last.gap*100<0.01 ? last.gap.toExponential(2)
+        : (last.gap*100).toFixed(3)+" %")
+    : "no incumbent yet";
+}
+function statTiles(r){
+  const g=$("#stats"); g.textContent="";
+  if(!r) return;
+  const add=(k,v,cls)=>{const s=el("div","stat"); s.append(el("div","k",k));
+    const val=el("div","v"+(cls?" "+cls:"")); val.textContent=v; s.append(val); g.append(s);};
+  add("status", r.status||"—", r.status==="optimal"?"ok":(r.status==="feasible"?"warn":"bad"));
+  add("objective", fmt(r.obj,6));
+  if (r.nodes>0) add("nodes", fmt(r.nodes));
+  add("iterations", fmt(r.iters));
+  add("time", secs(r.time));
+  add("primal infeas", fmt(r.pinf));
+  // Dual infeasibility is half of what "optimal" means and was never on screen.
+  if (r.dinf!==undefined) add("dual infeas", fmt(r.dinf));
+  // Only meaningful once there are integer columns to be infeasible about.
+  if (r.nodes>0 && r.iinf!==undefined) add("integer infeas", fmt(r.iinf));
+  // The library ships a model built to break a solver's numerics; this is the
+  // number that shows whether it did.
+  if (r.cond!==undefined) add("basis cond", String(r.cond));
+  if (r.cuts>0) add("cuts kept", fmt(r.cuts));
+}
+
+/* ================================================== reacting to an event == */
+const METRIC = {
+  model:    d=>fmt(d.rows)+"×"+fmt(d.cols)+" · "+fmt(d.nnz)+" nnz",
+  presolve: d=>"−"+fmt(d.rows)+" rows  −"+fmt(d.cols)+" cols",
+  global:   d=>{ const bits=[];
+                 if (d.products!==undefined) bits.push(fmt(d.products)+" products");
+                 if (d.nodes!==undefined)    bits.push(fmt(d.nodes)+" nodes");
+                 if (typeof d.bound==="number" && typeof d.incumbent==="number")
+                   bits.push("bound "+fmt(d.bound,6));
+                 return bits.length?bits.join(" · "):"running…"; },
+  scaling:  d=>secs(d.t),
+  primal:   d=>(d.root?"root LP · ":"")+fmt(d.iters)+" iters",
+  dual:     d=>(d.node?"tree · ":"")+fmt(d.iters)+" iters",
+  interior: d=>d.node ? fmt(d.iters)+" node QP relaxations"
+                      : fmt(d.iters)+" iters · "+fmt(d.factornnz)+" factor nnz",
+  pdhg:     d=>fmt(d.iters)+" iters · "+fmt(d.restarts)+" restarts",
+  crossover:d=>fmt(d.pushes)+" pushes · "+fmt(d.iters)+" iters",
+  cuts:     d=>fmt(d.kept)+" kept · "+fmt(d.gomory)+"g "+fmt(d.cover)+"c "+fmt(d.mir)+"m",
+  tree:     d=>fmt(d.nodes)+" node"+(d.nodes===1?"":"s")
+               +(d.open!==undefined?" · "+fmt(d.open)+" open":"")
+               +(typeof d.gap==="number"&&d.gap>0?" · gap "+(d.gap*100).toFixed(2)+"%":""),
+  postsolve:()=>"basis rebuilt",
+};
+function phase(text, cls){
+  const p=$("#phaseState"); p.textContent=text||"—";
+  p.className="state"+(cls?" "+cls:"");
+}
+function onStage(ev){
+  const name=ev.name, st=ev.state, data=ev.data||{}, at=ev.at;
+  // A phase with no heartbeat of its own -- the dual simplex under the tree,
+  // say -- would otherwise sit at a zero-length bar for the whole run.
+  for (const k in spans) if (spans[k].live && spans[k].end < at) spans[k].end = at;
+
+  if (name==="solve"){
+    if (st==="begin"){
+      phase(String(data.kind||"").toUpperCase()+" path","run");
+      $("#workNote").textContent = "dispatched to the "+String(data.kind||"").toUpperCase()+" path";
+      const kind=String(data.kind||"");
+      if (kind==="lp"||kind==="qp")
+        ["cuts","tree"].forEach(k=>{ setCard(k,"skip");
+          setMetric(k,"no integer columns"); edgeInto(k,"dim"); });
+      if (kind==="miqp"){
+        setCard("cuts","skip"); setMetric("cuts","no tableau to cut from"); edgeInto("cuts","dim");
+      }
+      // A nonconvex model goes to the spatial tree instead of any of the four
+      // continuous paths. Saying so is the difference between a diagram that
+      // explains the run and one that looks broken for the whole solve.
+      if (kind==="qcqp"||kind==="minlp"){
+        CONT.concat(["crossover"]).forEach(k=>{ setCard(k,"alt");
+          setMetric(k,"works — this model needs a global method"); edgeInto(k,"dim"); });
+        if (kind==="qcqp")
+          ["cuts","tree"].forEach(k=>{ setCard(k,"alt");
+            setMetric(k,"works — the spatial tree branches on intervals, not integers");
+            edgeInto(k,"dim"); });
+      } else {
+        setCard("global","alt");
+        setMetric("global","works — no row carries a bilinear product");
+        edgeInto("global","dim");
+      }
+    }
+    return;
+  }
+  if (name==="done"){
+    phase("finished", data.status==="optimal" ? "ok" : "warn");
+    // "3 open, gap 0.01%" was true a heartbeat before the end; on a proven run
+    // it is not true now, and leaving it up would be the page telling a small
+    // lie about the solver's own result.
+    if (stageData.tree && data.status==="optimal"){
+      delete stageData.tree.open; delete stageData.tree.gap;
+      setMetric("tree", METRIC.tree(stageData.tree));
+      if (selected==="tree") renderFocus();
+    }
+    return;
+  }
+  if (!byId[name]) return;
+
+  if (st==="begin"){
+    flushOut(); activeStage=name; outBlock=null;
+    spans[name]={begin:at, end:at, live:true};
+    setCard(name,"run"); setMetric(name,"running…"); edgeInto(name,"flow");
+    phase(byId[name].t,"run");
+    // On a continuous model exactly one of the four runs, so the moment one
+    // starts the other three can be greyed. A mixed-integer model is the
+    // exception and says so: primal solves the root (root=1), dual re-solves
+    // the nodes (node=1).
+    if (CONT.indexOf(name)>=0 && !data.root && !data.node){
+      CONT.filter(k=>k!==name).forEach(k=>{ if(!state[k]){
+        setCard(k,"alt"); setMetric(k,"works — this model went to "+byId[name].t.toLowerCase());
+        edgeInto(k,"dim"); }});
+      if(!state.crossover && (name==="primal"||name==="dual")){
+        setCard("crossover","alt"); setMetric("crossover","simplex already ends at a vertex");
+        edgeInto("crossover","dim");
+      }
+    }
+    if (data.root||data.node){
+      CONT.filter(k=>k!==name).forEach(k=>{ if(!state[k]){
+        setCard(k,"alt"); setMetric(k,"works — the tree solves its LPs with simplex");
+        edgeInto(k,"dim"); }});
+      if(!state.crossover){ setCard("crossover","alt");
+        setMetric("crossover","branch and bound has a basis already"); edgeInto("crossover","dim"); }
+    }
+    renderTimeline();
+
+  } else if (st==="node"){
+    stageData[name]=Object.assign(stageData[name]||{},data);
+    if (spans[name]) spans[name].end=at;
+    setMetric(name, METRIC[name]?METRIC[name](stageData[name]):"running…");
+    if (name==="tree"){
+      // A real fraction: how much of the initial gap is closed. Nothing else on
+      // this page has a meaningful percentage, so nothing else gets a bar.
+      if (typeof data.gap==="number" && data.gap>=0){
+        if (gap0===null) gap0=Math.max(data.gap,1e-12);
+        setBar("tree", 1 - Math.min(1, data.gap/gap0));
+      }
+      series.push({t:(typeof data.t==="number"?data.t:at), bound:data.bound,
+                   inc:(typeof data.incumbent==="number"&&data.incumbent!==0)
+                        ? data.incumbent : undefined,
+                   gap:data.gap});
+      renderConv();
+    }
+    if (selected===name) renderFocus();
+    renderTimeline();
+
+  } else if (st==="root"){
+    // The spatial tree reports its root relaxation before it starts splitting.
+    // Treated as progress: marking the card done here would claim the solve
+    // finished at the root, which is exactly what it has not done yet.
+    stageData[name]=Object.assign(stageData[name]||{},data);
+    if (spans[name]) spans[name].end=at;
+    setMetric(name, METRIC[name]?METRIC[name](stageData[name]):"root relaxation solved");
+    if (selected===name) renderFocus();
+    renderTimeline();
+
+  } else if (st==="skip"){
+    delete spans[name];
+    setCard(name,"skip");
+    setMetric(name, (name==="crossover"&&data.qp)
+      ? "a QP optimum need not be a vertex" : "switched off");
+    edgeInto(name,"dim"); renderTimeline();
+
+  } else {                                                      // end
+    stageData[name]=Object.assign(stageData[name]||{},data);
+    if (spans[name]){ spans[name].end=at; spans[name].live=false; }
+    else spans[name]={begin:Math.max(0,at-(data.t||0)), end:at, live:false};
+    if (typeof data.t==="number" && data.t>0)
+      spans[name].begin = Math.max(0, spans[name].end - data.t);
+    if (name==="model") spans[name].begin = 0;
+    const failed=data.status && data.status!=="optimal" && data.status!=="feasible";
+    setCard(name, failed?"fail":"done");
+    setMetric(name, METRIC[name]?METRIC[name](stageData[name]):"done");
+    edgeInto(name,"on");
+    flushOut(); activeStage=name; outBlock=null;
+    if (name==="tree"){
+      setBar("tree",1);
+      delete stageData.tree.open;               // live-only: nothing is open now
+      if (typeof data.bound==="number")
+        series.push({t:(typeof data.t==="number"?data.t:at), bound:data.bound,
+                     inc:(typeof data.incumbent==="number"&&data.incumbent!==0)
+                          ? data.incumbent
+                          : (series.length?series[series.length-1].inc:undefined), gap:0});
+    }
+    renderTimeline(); renderConv();
+    if (selected===name) renderFocus();
+  }
+}
+let gap0=null;
+
+/* ------------------------------------------------------------ run control */
+function startClock(kind){
+  stopClock(); t0=performance.now();
+  const s=$("#runState"); s.className="state "+(kind==="replay"?"rep":"run");
+  s.innerHTML='<span class="dot"></span>'+(kind==="replay"?"replaying":"solving");
+  $("#clock").textContent="0.0 s";
+  clockTimer=setInterval(()=>{
+    $("#clock").textContent=((performance.now()-t0)/1000).toFixed(1)+" s"; },100);
+}
+function stopClock(finalText, cls){
+  if (clockTimer) clearInterval(clockTimer);
+  clockTimer=null;
+  if (finalText!==undefined){
+    const s=$("#runState"); s.className="state "+(cls||""); s.textContent=finalText;
+  }
+}
+function busy(on){
+  $("#btnRun").disabled=on; $("#btnCompare").disabled=on; $("#btnAlgos").disabled=on;
+  $("#btnTour").disabled=on;
+  $("#btnStop").disabled=!on;
+  $("#btnReplay").disabled = on || REC.length===0;
+}
+function resetRun(){
+  stageData={}; state={}; spans={}; series=[]; evs=[]; edgeState={};
+  selected=null; activeStage="model"; outBlock=null; gap0=null;
+  buildFlow();
+  // Mid-tour, the paths already proven on earlier legs stay lit. Wiping them
+  // between legs would defeat the whole point of the tour, which is to end
+  // with every continuous method visibly finished on the same model.
+  if (tour) for (const k in tour.lit){
+    setCard(k, tour.lit[k].cls); setMetric(k, tour.lit[k].met); edgeInto(k,"on");
+  }
+  $("#feed").textContent=""; $("#raw").textContent="";
+  outBuf.length=0; rawBuf.length=0; rawLines=0; trimmedEvents=0; trimNote=null;
+  $("#evCount").textContent="0 events"; $("#stats").textContent="";
+  $("#filterLabel").textContent=""; $("#clearFilter").classList.add("hide");
+  $("#workNote").textContent=""; phase("—");
+  renderTimeline(); renderConv(); renderFocus(); wtab("tl"); ctab("feed");
+}
+
+/* ------------------------------------------------------------------ tour --
+   Four solves of the same model, one per continuous method, with the cards
+   from earlier legs left lit. Nothing is simulated: each leg is a real
+   subprocess streaming its own events, exactly as a single run does.        */
+let tour=null;
+const TOUR_NAMES={primal:"primal simplex",dual:"dual simplex",
+                  interior:"interior point",pdhg:"first-order (PDHG)"};
+function startTour(){
+  if (!picked && !paste){ alert("Pick a model first."); return; }
+  tour={queue:CONT.slice(), results:{}, lit:{}, leg:0};
+  nextTourLeg();
+}
+function captureTourLit(){
+  if (!tour) return;
+  CONT.concat(["crossover"]).forEach(k=>{
+    if (state[k]==="done" || state[k]==="fail"){
+      const c=document.getElementById("c-"+k);
+      tour.lit[k]={cls:state[k], met:c?c.querySelector(".cmet").textContent:""};
+    }
+  });
+}
+function nextTourLeg(){
+  if (!tour) return;
+  if (!tour.queue.length){ finishTour(); return; }
+  const a=tour.queue.shift(); tour.leg++; tour.current=a;
+  sysLine("—","STUDIO","leg "+tour.leg+" of 4 — "+TOUR_NAMES[a]);
+  run(a);
+}
+function finishTour(){
+  const t=tour; tour=null; busy(false);
+  const ks=CONT.filter(k=>t.results[k]);
+  const objs=ks.map(k=>t.results[k].obj).filter(v=>typeof v==="number");
+  const spread=objs.length?Math.max.apply(null,objs)-Math.min.apply(null,objs):NaN;
+  const f=document.createDocumentFragment();
+  f.append(el("div","note", objs.length<2 ? "Not enough completed legs to compare."
+    : (spread<=1e-6*(1+Math.abs(objs[0]||0))
+       ? "Four separate solves of the same model, four different algorithms, one "
+         +"answer: "+fmt(objs[0],6)+" — agreeing to "
+         +(spread===0?"every printed digit":spread.toExponential(2))+"."
+       : "The four disagree by "+spread.toExponential(2)
+         +". On a proven optimum that is a defect, not a tolerance.")));
+  f.append(table(["method","status","objective","iterations","time"],
+    ks.map(k=>[TOUR_NAMES[k] + (t.results[k].fellBack ? " — fell back" : ""),
+               t.results[k].status, fmt(t.results[k].obj,6),
+               fmt(t.results[k].iters), secs(t.results[k].time)])));
+  if (ks.some(k=>t.results[k].fellBack))
+    f.append(el("div","note","A row marked “fell back” hit its own limit and "
+      + "handed the model to another method, which finished it. The answer is still "
+      + "right; that method did not produce it alone."));
+  showCmp(f);
+}
+
+function run(algoOverride){
+  if (es){ es.close(); es=null; }
+  cancelReplay();
+  const q=new URLSearchParams({
+    algorithm: algoOverride || $("#algorithm").value,
+    cuts:$("#cuts").checked?"1":"0",
+    presolve:$("#presolve").checked?"1":"0",
+    scaling:$("#scaling").checked?"1":"0",
+    crossover:$("#crossover").checked?"1":"0",
+    threads:String(parseInt($("#threads").value||"0",10)),
+    timeLimit:String(Number($("#timeLimit").value)||60),
+  });
+  if (paste){
+    const t=$("#mps").value.trim();
+    if(!t){ alert("Paste an MPS model first, or pick one from the library."); return; }
+    q.set("mps",t);
+  } else if (picked) q.set("model",picked);
+  else { alert("Pick a model first."); return; }
+
+  resetRun(); REC=[]; busy(true); startClock("live");
+  es=new EventSource("/api/stream?"+q.toString());
+  const rec=(kind,payload)=>REC.push({kind:kind,payload:payload,
+    at:(payload&&typeof payload.at==="number")?payload.at:(performance.now()-t0)/1000});
+
+  es.addEventListener("command", e=>{
+    const d=JSON.parse(e.data); rec("command",d);
+    sysLine("0.000","SOLVER","$ "+d.argv.join(" "),"cmd"); pushRaw("$ "+d.argv.join(" "));
+  });
+  es.addEventListener("stage", e=>{ const d=JSON.parse(e.data); rec("stage",d);
+    onStage(d); stageCard(d); pushRaw("IGAOS_STAGE "+d.name+" "+d.state); });
+  es.addEventListener("log", e=>{ const d=JSON.parse(e.data); rec("log",d); outLine(d.line); });
+  es.addEventListener("result", e=>{ const r=JSON.parse(e.data); rec("result",r);
+    statTiles(r); resultCard(r);
+    if (tour && tour.current) tour.results[tour.current]=r; });
+  es.addEventListener("fail", e=>{ const d=JSON.parse(e.data); rec("fail",d);
+    sysLine("—","ERROR",d.message); });
+  es.addEventListener("done", e=>{
+    const d=JSON.parse(e.data); rec("done",d);
+    sysLine(d.wall.toFixed(3),"SOLVER","process exited after "+secs(d.wall));
+    stopClock("completed","ok"); $("#clock").textContent=secs(d.wall);
+    if(es){es.close(); es=null;}
+    if (series.length>2) wtab("cv");
+    requestAnimationFrame(drawEdges);
+    if (tour){
+      // A method that hit its limit and handed the model to another one still
+      // reports the right answer. The table must not read as though it solved
+      // the model itself.
+      if (tour.current && tour.results[tour.current])
+        tour.results[tour.current].fellBack = (state[tour.current]==="fail");
+      captureTourLit(); setTimeout(nextTourLeg, 500);
+    }
+    else busy(false);
+  });
+  es.onerror=()=>{ if(es){ es.close(); es=null; stopClock("disconnected","bad");
+    tour=null; busy(false); } };
+}
+$("#btnRun").onclick=()=>run();
+$("#btnTour").onclick=startTour;
+$("#btnStop").onclick=()=>{
+  cancelReplay(); tour=null;
+  if (es){ es.close(); es=null; sysLine("—","SOLVER","stopped — the solve was killed"); }
+  stopClock("stopped","warn"); busy(false);
+};
+
+/* -------------------------------------------------------------- replay ----
+   Not an animation. This is the event stream the solver actually produced on
+   the last run, carrying the timestamps it actually reported, played back on a
+   stretched clock so a solve that finished in sixty milliseconds can be read.
+   The numbers are the same numbers; only the spacing changes.               */
+function cancelReplay(){ replayTimers.forEach(clearTimeout); replayTimers=[]; replaying=false; }
+function replay(){
+  if(!REC.length) return;
+  cancelReplay(); if(es){ es.close(); es=null; }
+  resetRun(); busy(true); replaying=true; startClock("replay");
+  // Stretching a 60 ms run by eight is still half a second, which nobody can
+  // read, so each setting also carries a floor. The event times are untouched;
+  // only the spacing between them changes, and the closing line says what the
+  // run really took.
+  const span=REC[REC.length-1].at||0;
+  const floor=speed===1 ? 0 : (speed===8 ? 5 : 15);
+  const total=Math.max(span*speed, floor, 0.001);
+  const scale=span>0 ? total/span : 0;
+  REC.forEach((e,i)=>{
+    replayTimers.push(setTimeout(()=>{
+      if(!replaying) return;
+      if (e.kind==="command"){ sysLine("0.000","REPLAY","$ "+e.payload.argv.join(" "),"cmd");
+                               pushRaw("$ "+e.payload.argv.join(" ")); }
+      else if (e.kind==="stage"){ onStage(e.payload); stageCard(e.payload);
+                                  pushRaw("IGAOS_STAGE "+e.payload.name+" "+e.payload.state); }
+      else if (e.kind==="log") outLine(e.payload.line);
+      else if (e.kind==="result"){ statTiles(e.payload); resultCard(e.payload); }
+      else if (e.kind==="fail") sysLine("—","ERROR",e.payload.message);
+      else if (e.kind==="done"){
+        sysLine(e.payload.wall.toFixed(3),"REPLAY",
+                "replay of a run that really took "+secs(e.payload.wall));
+        stopClock("replay done","rep"); busy(false); replaying=false;
+        $("#clock").textContent=secs(e.payload.wall)+" real";
+        if (series.length>2) wtab("cv");
+        requestAnimationFrame(drawEdges);
+      }
+    }, span>0 ? e.at*scale*1000 : i*40));
+  });
+}
+$("#btnReplay").onclick=replay;
+
+/* ---------------------------------------------------------- comparisons -- */
+function reqBody(){
+  const b={algorithm:$("#algorithm").value, timeLimit:Number($("#timeLimit").value)||60,
+           presolve:$("#presolve").checked, scaling:$("#scaling").checked,
+           crossover:$("#crossover").checked,
+           threads:parseInt($("#threads").value||"0",10)};
+  if (paste) b.mps=$("#mps").value.trim(); else b.model=picked;
+  return b;
+}
+function showCmp(node){
+  ctab("cmp");
+  const w=$("#cmpWrap"); w.textContent=""; const p=el("div"); p.style.padding="10px 14px";
+  p.append(node); w.append(p);
+}
+async function post(url, busyText){
+  showCmp(el("div","note",busyText)); busy(true);
+  try{
+    const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
+                            body:JSON.stringify(reqBody())});
+    return await r.json();
+  }catch(err){ showCmp(el("div","err","Could not reach the solver: "+err.message)); return null; }
+  finally{ busy(false); }
+}
+function table(head, rows){
+  const t=el("table","cmp"); const th=el("thead"); const hr=el("tr");
+  head.forEach(h=>hr.append(el("th",null,h))); th.append(hr); t.append(th);
+  const tb=el("tbody");
+  rows.forEach(r=>{ const tr=el("tr");
+    r.forEach((c,i)=>tr.append(el("td", i?"n":null, String(c)))); tb.append(tr); });
+  t.append(tb); return t;
+}
+$("#btnCompare").onclick=async()=>{
+  const d=await post("/api/compare","Solving twice — with separation and without. Both runs "
+                                  + "go to completion, so give it a moment…");
+  if(!d) return;
+  const on=d.withCuts||{}, off=d.withoutCuts||{};
+  const f=document.createDocumentFragment();
+  const same=Math.abs(on.obj-off.obj)<=1e-6*(1+Math.abs(on.obj));
+  f.append(el("div","note", same
+    ? "Both runs return "+fmt(on.obj,6)+". The difference is how much work it took to prove it."
+    : "Objectives differ: "+fmt(on.obj,9)+" against "+fmt(off.obj,9)
+      +" — check whether either hit the time limit."));
+  f.append(table(["measure","with cuts","without"],
+    [["status",on.status,off.status],["objective",fmt(on.obj,6),fmt(off.obj,6)],
+     ["nodes",fmt(on.nodes),fmt(off.nodes)],["simplex iterations",fmt(on.iters),fmt(off.iters)],
+     ["time",secs(on.time),secs(off.time)],["cuts kept",fmt(on.cuts),fmt(off.cuts)],
+     ["root LP bound",fmt(on.rootlp,6),"—"],["bound after cuts",fmt(on.rootcut,6),"—"]]));
+  showCmp(f);
+};
+$("#btnAlgos").onclick=async()=>{
+  const d=await post("/api/algorithms","Running all four continuous paths on the same model…");
+  if(!d) return;
+  const names={primal:"primal simplex",dual:"dual simplex",
+               interior:"interior point",pdhg:"first-order (PDHG)"};
+  const ks=Object.keys(names).filter(k=>d[k]);
+  const objs=ks.map(k=>d[k].obj).filter(v=>typeof v==="number");
+  const spread=objs.length?Math.max.apply(null,objs)-Math.min.apply(null,objs):NaN;
+  const f=document.createDocumentFragment();
+  f.append(el("div","note", spread<=1e-6*(1+Math.abs(objs[0]||0))
+    ? "All four returned "+fmt(objs[0],6)+" — agreement to "
+      +(spread===0?"every printed digit":spread.toExponential(2))+"."
+    : "The four disagree by "+spread.toExponential(2)
+      +". On a proven optimum that is a defect, not a tolerance."));
+  f.append(table(["method","status","objective","iterations","time"],
+    ks.map(k=>[names[k], d[k].status, fmt(d[k].obj,6), fmt(d[k].iters), secs(d[k].time)])));
+  showCmp(f);
+};
+
+function showDiag(node){
+  ctab("diag");
+  const w=$("#diagWrap"); w.textContent="";
+  const p=el("div"); p.style.padding="10px 14px"; p.append(node); w.append(p);
+}
+function lim(v){ return (v===null||v===undefined) ? "no limit" : fmt(v,6); }
+
+$("#btnDiag").onclick=async()=>{
+  showDiag(el("div","note","Asking the solver what this model is worth, or why it cannot be built…"));
+  busy(true);
+  let d=null;
+  try{
+    const r=await fetch("/api/diagnose",{method:"POST",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify(reqBody())});
+    d=await r.json();
+  }catch(err){ showDiag(el("div","err","Could not reach the solver: "+err.message)); return; }
+  finally{ busy(false); }
+  if(!d) return;
+  const f=document.createDocumentFragment();
+
+  if(d.error){
+    f.append(el("div","err", d.error));
+    if(d.stale) f.append(el("div","note",
+      "Rebuild with:  cmake --build build -j8"));
+    showDiag(f); return;
+  }
+
+  if(d.iis){
+    const i=d.iis;
+    f.append(el("div","note",
+      "This model has no feasible point, and the solver proved it. These "+i.members
+      +" constraints are the ones in conflict: remove any single one and the rest "
+      +"become satisfiable. "+(i.irreducible
+        ? "Verified irreducible in "+i.solves+" LP solves."
+        : "NOTE: the search was cut short, so this set is infeasible but not proven minimal.")));
+    const rows=[];
+    i.rowList.forEach(r=>rows.push(["constraint", r.name, r.lower+" .. "+r.upper]));
+    i.boundList.forEach(b=>rows.push(["bound", b.name, "x "+b.sense+" "+b.value]));
+    f.append(table(["kind","name","what it requires"], rows));
+  }
+
+  if(d.sensitivity){
+    const s0=d.sensitivity;
+    const binding=s0.rows.filter(r=>Math.abs(r.dual)>1e-9);
+    if(binding.length){
+      f.append(el("div","note",
+        "What one more unit of each binding constraint is worth — and the range of "
+        +"right-hand side over which that price stays true. Outside the range the price "
+        +"is not merely approximate, it is wrong, which is why it is printed beside it."));
+      f.append(table(["constraint","shadow price","activity","valid from","to"],
+        binding.slice(0,20).map(r=>[r.name+(r.degenerate?"  [degenerate]":""),
+          fmt(r.dual,6), fmt(r.activity,6), lim(r.rhsLower), lim(r.rhsUpper)])));
+    }
+    const priced=s0.cols.filter(c=>Math.abs(c.reducedCost)>1e-9);
+    if(priced.length){
+      f.append(el("div","note",
+        "Variables the plan does not use, and how far their objective coefficient "
+        +"would have to move before they paid their way."));
+      f.append(table(["variable","reduced cost","value","obj from","to"],
+        priced.slice(0,20).map(c=>[c.name, fmt(c.reducedCost,6), fmt(c.value,6),
+          lim(c.objLower), lim(c.objUpper)])));
+    }
+    const deg=s0.rows.filter(r=>r.degenerate).length;
+    if(deg) f.append(el("div","note",
+      deg+" range(s) have a zero-width side: the optimum is degenerate there, so the "
+      +"price is one of several valid values. Labelled rather than rounded off."));
+  }
+
+  if(!d.iis && !d.sensitivity)
+    f.append(el("div","note", d.note || "No diagnostics apply to this model."));
+  showDiag(f);
+};
+
+$("#btnVerify").onclick=async()=>{
+  showDiag(el("div","note","Solving, writing a certificate, then handing it to the checker — "
+                          +"a separate program that shares no code with the solver…"));
+  busy(true);
+  let d=null;
+  try{
+    const r=await fetch("/api/verify",{method:"POST",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify(reqBody())});
+    d=await r.json();
+  }catch(err){ showDiag(el("div","err","Could not reach the solver: "+err.message)); return; }
+  finally{ busy(false); }
+  if(!d) return;
+  const f=document.createDocumentFragment();
+  if(d.error){
+    f.append(el("div","err", d.error));
+    if(d.note) f.append(el("div","note", d.note));
+    showDiag(f); return;
+  }
+  const v = d.verdict || "(no verdict)";
+  const proven = /PROVEN|VERIFIED/i.test(v);
+  f.append(el("div","note",
+    "The solver wrote a "+fmt(d.certBytes)+"-byte proof of its own answer. "
+    +d.checker+" then re-checked it in exact rational arithmetic — it never has to "
+    +"trust the solver, or even understand it."));
+  const verdictBox = el("div", proven?"note":"err", "VERDICT  ·  "+v);
+  verdictBox.style.fontWeight="640";
+  f.append(verdictBox);
+  const rows=[];
+  if(d.lowerBound!==null&&d.lowerBound!==undefined)
+    rows.push(["rigorous lower bound", d.lowerBound, "holds whatever x turns out to be"]);
+  if(d.objectiveExact!==null&&d.objectiveExact!==undefined)
+    rows.push(["objective, recomputed exactly", d.objectiveExact, "in rational arithmetic, here"]);
+  if(d.objectiveStated!==null&&d.objectiveStated!==undefined)
+    rows.push(["objective the solver stated", d.objectiveStated, "what the run reported"]);
+  if(d.violation!==null&&d.violation!==undefined)
+    rows.push(["primal feasibility missed by", d.violation,
+               "floating point is almost never exactly feasible; the checker says so "
+               +"rather than calling a tolerance a proof"]);
+  if(rows.length) f.append(table(["quantity","value","what it means"], rows));
+  showDiag(f);
+};
+
+function showSol(node){
+  ctab("sol");
+  const w=$("#solWrap"); w.textContent="";
+  const p=el("div"); p.style.padding="10px 14px"; p.append(node); w.append(p);
+}
+$("#btnSolution").onclick=async()=>{
+  showSol(el("div","note","Solving and reading back the decision variables…"));
+  busy(true);
+  let d=null;
+  try{
+    const r=await fetch("/api/solution",{method:"POST",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify(reqBody())});
+    d=await r.json();
+  }catch(err){ showSol(el("div","err","Could not reach the solver: "+err.message)); return; }
+  finally{ busy(false); }
+  if(!d) return;
+  const f=document.createDocumentFragment();
+  if(d.error){ f.append(el("div","err",d.error)); showSol(f); return; }
+
+  const meta=el("div","solmeta");
+  const pair=(k,v)=>{ const b=el("div"); b.append(el("span",null,k+" "));
+                      b.append(el("b",null,v)); return b; };
+  meta.append(pair("status", d.status||"—"));
+  meta.append(pair("objective", fmt(d.objective,6)));
+  meta.append(pair("nonzero", fmt(d.nonzero)+" of "+fmt(d.total)));
+  if(d.cond) meta.append(pair("basis cond", String(d.cond)));
+  f.append(meta);
+
+  if(!d.columns.length){
+    f.append(el("div","note","Every variable is zero at the optimum."));
+    showSol(f); return;
+  }
+  f.append(el("div","note",
+    "The "+fmt(d.columns.length)+" largest decisions, by magnitude. The bar is the "
+    +"value relative to the largest; the reduced cost is what the objective would "
+    +"move by if that variable were forced one unit off where it sits."));
+
+  const max=Math.max.apply(null, d.columns.map(c=>Math.abs(c.value)))||1;
+  const t=el("table","cmp");
+  const th=el("thead"), hr=el("tr");
+  ["variable","value","magnitude","reduced cost"].forEach(h=>hr.append(el("th",null,h)));
+  th.append(hr); t.append(th);
+  const tb=el("tbody");
+  d.columns.forEach(c=>{
+    const tr=el("tr");
+    tr.append(el("td",null,c.name));
+    tr.append(el("td","n",fmt(c.value,6)));
+    const cell=el("td","magcell");
+    const track=el("div","magtrack"), fill=el("div","magfill");
+    fill.style.width=(Math.max(1,(Math.abs(c.value)/max)*100)).toFixed(2)+"%";
+    track.title=c.name+" = "+c.value+"   reduced cost "+c.rc;
+    track.append(fill); cell.append(track); tr.append(cell);
+    tr.append(el("td","n", Math.abs(c.rc)>1e-12 ? fmt(c.rc,6) : "—"));
+    tb.append(tr);
+  });
+  t.append(tb); f.append(t);
+  if(d.nonzero>d.columns.length)
+    f.append(el("div","note","… and "+fmt(d.nonzero-d.columns.length)
+      +" further nonzero variables, omitted here rather than scrolled through."));
+  showSol(f);
+};
+
+/* ------------------------------------------------------------------ boot */
+buildFlow(); renderTimeline(); renderConv(); renderFocus();
+</script>
+</body>
+</html>

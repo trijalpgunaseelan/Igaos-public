@@ -1,0 +1,42 @@
+# IGAOS Solver Studio on Fly.io
+#   flyctl launch --no-deploy --copy-config --config deploy/fly.toml
+#   flyctl deploy --config deploy/fly.toml --remote-only
+#
+# Run deploy/fly-deploy.sh to do both with the checks.
+
+app            = "igaos-solver-studio"   # must be globally unique — change if taken
+primary_region = "sin"                   # Singapore, the closest Fly region to Chennai
+
+[build]
+  dockerfile = "deploy/Dockerfile"
+
+[env]
+  IGAOS_TIME_LIMIT     = "20"    # hard ceiling per solve, seconds
+  IGAOS_MAX_CONCURRENT = "2"     # further solves get 429 rather than a queue
+  IGAOS_THREADS        = "1"     # a visitor cannot ask for 64 threads
+  IGAOS_MAX_UPLOAD     = "2097152"
+
+[http_service]
+  internal_port        = 8420
+  force_https          = true
+  auto_stop_machines   = "suspend"   # idles to zero cost, wakes on the next request
+  auto_start_machines  = true
+  min_machines_running = 0
+
+  # Each solve holds one connection open for the whole stream, so these are
+  # deliberately small: the app itself only runs IGAOS_MAX_CONCURRENT solves.
+  [http_service.concurrency]
+    type       = "requests"
+    soft_limit = 4
+    hard_limit = 8
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval     = "30s"
+    timeout      = "5s"
+    method       = "GET"
+    path         = "/healthz"
+
+[[vm]]
+  size   = "shared-cpu-2x"   # branch and bound is CPU-bound; 1x makes a 20 s solve feel slow
+  memory = "1gb"

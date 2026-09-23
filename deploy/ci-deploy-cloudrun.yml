@@ -1,0 +1,65 @@
+# Deploy IGAOS Solver Studio to Google Cloud Run on every push to main.
+# Always on, scales to zero, inside the free tier. Nothing runs on your laptop.
+#
+# One-time setup (see deploy/README.md):
+#   repo Settings > Secrets and variables > Actions:
+#     GCP_PROJECT_ID   your project id
+#     GCP_SA_KEY       the JSON key of a service account with
+#                      roles/run.admin, roles/cloudbuild.builds.editor,
+#                      roles/artifactregistry.writer, roles/iam.serviceAccountUser
+
+name: deploy to cloud run
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['Deck/**', 'Jury/**', '**/*.md']
+  workflow_dispatch:
+
+env:
+  SERVICE: igaos-solver-studio
+  REGION: asia-south1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: build the image
+        run: |
+          gcloud builds submit \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
+            --config deploy/cloudbuild.yaml \
+            --substitutions=_IMAGE="gcr.io/${{ secrets.GCP_PROJECT_ID }}/$SERVICE" .
+
+      - name: deploy
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
+            --region "$REGION" \
+            --image "gcr.io/${{ secrets.GCP_PROJECT_ID }}/$SERVICE" \
+            --platform managed --allow-unauthenticated \
+            --port 8420 --cpu 1 --memory 512Mi \
+            --min-instances 0 --max-instances 3 --concurrency 4 --timeout 300 \
+            --set-env-vars IGAOS_TIME_LIMIT=20,IGAOS_MAX_CONCURRENT=2,IGAOS_THREADS=1
+
+      - name: prove it is up
+        run: |
+          URL=$(gcloud run services describe "$SERVICE" \
+                  --project "${{ secrets.GCP_PROJECT_ID }}" --region "$REGION" \
+                  --format='value(status.url)')
+          echo "URL=$URL" >> "$GITHUB_ENV"
+          for i in $(seq 1 20); do
+            curl -fsS "$URL/healthz" && break || sleep 5
+          done
+          echo "### Solver Studio is live" >> "$GITHUB_STEP_SUMMARY"
+          echo "$URL" >> "$GITHUB_STEP_SUMMARY"

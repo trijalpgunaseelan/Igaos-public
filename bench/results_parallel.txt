@@ -1,0 +1,102 @@
+Multi-core branch and cut
+=========================
+
+Measured 28 Aug 2026, aarch64 Linux, GCC 11, TWO cores.  Reproduce with
+
+    for t in 1 2 4; do
+        ./build/igaos demo/models/uc_l.mps -q --no-live --threads $t
+    done
+
+READ THE MACHINE FIRST
+----------------------
+This box has TWO cores.  `nproc` says 2.  Every number below is therefore a
+two-core measurement, and the "4 threads" column is four workers time-slicing
+two cores, not four cores.  Nothing here says what the tree does on 32 cores,
+and nothing here should be quoted as if it did.  What it does establish is that
+the tree is genuinely parallel rather than nominally parallel: two workers do
+close to twice the work of one, which is the property that was missing.
+
+WHAT WAS CHANGED
+----------------
+The mixed-integer branch-and-cut tree in src/solver.cpp was a single `while`
+loop over one priority queue with one Simplex instance.  It is now a worker
+pool.  Each worker owns a full copy of the cut-augmented relaxation, so a
+warm-started dual re-solve on one thread cannot disturb another; the node queue,
+the pseudocost table and the incumbent are the only shared state, and one mutex
+guards all three.  The MIQP tree in src/miqp.cpp was already parallel and is
+unchanged -- this brings the LP-relaxation tree up to it.
+
+`--threads N` now controls both.  `--threads 1` is the serial search exactly as
+it was, including reproducible node counts.
+
+RESULT — wall clock in seconds
+------------------------------
+instance          1 thread   2 threads   4 threads   speedup @2
+lseu                 0.760       0.469       0.405       1.62x
+rgn                  1.954       1.179       1.110       1.66x
+dcmulti              2.616       1.330       1.470       1.97x
+sched_m              3.225       1.990       1.940       1.62x
+gesa2               15.543       7.900       6.986       1.97x
+sched_m_2           19.969      10.734      10.376       1.86x
+uc_l                24.563      13.057      12.856       1.88x
+sched_l_0          168.170      85.338      93.040       1.97x
+
+  speedup at 2 threads on 2 cores:  1.62x to 1.97x, geometric mean 1.81x
+  speedup at 4 threads on 2 cores:  no further gain, as two cores predicts
+
+Every pair returned the SAME objective.  That is the property that matters and
+it is checked three ways:
+
+  · tests/test_all.cpp `testParallelTree` solves the same model at 1 and at 4
+    threads and fails if the objectives differ, so it runs on every `ctest` --
+    including the infeasible case, where a worker that gives up while holding a
+    node it has taken off the queue could otherwise turn "not searched" into
+    "does not exist";
+  · a 16-model sweep at 1 and 4 threads -- the seven MIPLIB-family instances
+    that finish, the three bundled unit-commitment models, two refinery
+    schedules, both MIQP models, and two larger generated schedules -- 16 of 16
+    identical objectives, with node counts differing by up to 40%;
+  · ThreadSanitizer, below.
+
+THREADSANITIZER
+---------------
+    g++ -std=c++17 -O1 -g -fsanitize=thread -Iinclude src/*.cpp \
+        apps/igaos_cli.cpp -o igaos_tsan -pthread
+    ./igaos_tsan demo/models/sched_s.mps --threads 4
+    ./igaos_tsan demo/models/uc_m.mps    --threads 4
+    ./igaos_tsan benchmarks/milp/lseu.mps --threads 4     # and egout, flugpl
+
+  data races reported ....... 0
+  objectives ................ unchanged on all six runs
+
+WHAT IS NOT DETERMINISTIC, AND WHY THAT IS SAID OUT LOUD
+--------------------------------------------------------
+Node counts differ from run to run above one thread: which subtree is expanded
+next depends on which worker reached the queue first.  So does the path the gap
+takes, and so does the incumbent a run reports when it stops on a time limit.
+bell5 at a 60 s limit has returned 9,065,322, 9,032,234 and 8,988,498 across runs
+in this repository's history; none is proven and all three are honest readings of
+an unfinished search.  The ANSWER on a solve that CLOSES does not differ, and
+that is the only thing this parallelism is allowed to change.
+
+CPLEX and Gurobi both offer a deterministic parallel mode, which synchronises
+workers at fixed points and gives up some speed for a reproducible search.  This
+does not have one.  `--threads 1` is the reproducible mode here.
+
+THE HONEST CEILING
+------------------
+Branch and bound does not scale linearly and is not expected to.  Work is
+duplicated when two workers explore subtrees that a better incumbent would have
+pruned, and the pool cannot help a model that closes at the root: uc_m solves in
+one node with cuts, and it is 0.034 s at one thread and 0.034 s at four.
+sched_s solves in 17 nodes and gains nothing.  The code stays serial below eight
+integer columns for that reason, and on models above two million nonzeros it
+caps the pool at four workers, because each worker holds its own copy of the
+matrix.
+
+And the pool made an older bug fatal before it made anything faster: the tree
+never freed a node, so memory grew with nodes EXPLORED rather than nodes still
+open, and the parallel search reached the ceiling sooner.  gt2 was killed by the
+kernel at 289 s of a 300 s limit with no output at all.  That is defect 24 in
+docs/PHASE2_REPORT.md, it is fixed three ways, and the last of them is a real
+memory limit that stops the tree and reports the incumbent instead of dying.

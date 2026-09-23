@@ -1,0 +1,263 @@
+[
+ {
+  "name": "uc_l_0",
+  "without_cuts": {
+   "status": "feasible",
+   "obj": 301360.397175,
+   "bound": 295341.790578,
+   "gap": 0.019971458271953933,
+   "nodes": 38276,
+   "iters": 2870799,
+   "cuts": 0,
+   "cutrounds": 0,
+   "rootlp": 0.0,
+   "rootcut": 0.0,
+   "time": 120.12804293632507
+  },
+  "with_cuts": {
+   "status": "feasible",
+   "obj": 299930.371241,
+   "bound": 296982.544928,
+   "gap": 0.00982836883374962,
+   "nodes": 31248,
+   "iters": 1808016,
+   "cuts": 73,
+   "cutrounds": 12,
+   "rootlp": 294724.005698,
+   "rootcut": 295453.788699,
+   "time": 120.08054780960083
+  }
+ },
+ {
+  "name": "uc_l_1",
+  "without_cuts": {
+   "status": "feasible",
+   "obj": 304921.034497,
+   "bound": 297881.13094,
+   "gap": 0.02308762846949231,
+   "nodes": 47725,
+   "iters": 2251301,
+   "cuts": 0,
+   "cutrounds": 0,
+   "rootlp": 0.0,
+   "rootcut": 0.0,
+   "time": 120.12278056144714
+  },
+  "with_cuts": {
+   "status": "optimal",
+   "obj": 298617.164379,
+   "bound": 298617.164376,
+   "gap": 1.0046384472637113e-11,
+   "nodes": 4671,
+   "iters": 431087,
+   "cuts": 91,
+   "cutrounds": 12,
+   "rootlp": 296867.895765,
+   "rootcut": 297726.114532,
+   "time": 30.040175914764404
+  }
+ },
+ {
+  "name": "uc_l_2",
+  "without_cuts": {
+   "status": "optimal",
+   "obj": 212996.059877,
+   "bound": 212996.059877,
+   "gap": 0.0,
+   "nodes": 36641,
+   "iters": 1801837,
+   "cuts": 0,
+   "cutrounds": 0,
+   "rootlp": 0.0,
+   "rootcut": 0.0,
+   "time": 69.29616928100586
+  },
+  "with_cuts": {
+   "status": "optimal",
+   "obj": 212996.059877,
+   "bound": 212996.059866,
+   "gap": 5.164413113692305e-11,
+   "nodes": 1,
+   "iters": 4695,
+   "cuts": 40,
+   "cutrounds": 2,
+   "rootlp": 212448.851467,
+   "rootcut": 212996.059866,
+   "time": 0.20971989631652832
+  }
+ },
+ {
+  "name": "uc_m_0",
+  "without_cuts": {
+   "status": "optimal",
+   "obj": 76267.6420856,
+   "bound": 76267.6420856,
+   "gap": 0.0,
+   "nodes": 51,
+   "iters": 1295,
+   "cuts": 0,
+   "cutrounds": 0,
+   "rootlp": 0.0,
+   "rootcut": 0.0,
+   "time": 0.05506443977355957
+  },
+  "with_cuts": {
+   "status": "optimal",
+   "obj": 76267.6420856,
+   "bound": 76267.642081,
+   "gap": 6.031399158343151e-11,
+   "nodes": 1,
+   "iters": 1656,
+   "cuts": 21,
+   "cutrounds": 1,
+   "rootlp": 76208.2839822,
+   "rootcut": 76267.6420843,
+   "time": 0.04338860511779785
+  }
+ },
+ {
+  "name": "uc_m_1",
+  "without_cuts": {
+   "status": "optimal",
+   "obj": 163316.255604,
+   "bound": 163316.255604,
+   "gap": 0.0,
+   "nodes": 8467,
+   "iters": 121703,
+   "cuts": 0,
+   "cutrounds": 0,
+   "rootlp": 0.0,
+   "rootcut": 0.0,
+   "time": 3.646658420562744
+  },
+  "with_cuts": {
+   "status": "optimal",
+   "obj": 163316.255604,
+   "bound": 163316.255599,
+   "gap": 3.061550088902437e-11,
+   "nodes": 17,
+   "iters": 4035,
+   "cuts": 67,
+   "cutrounds": 8,
+   "rootlp": 162925.626377,
+   "rootcut": 163316.155945,
+   "time": 0.14539170265197754
+  }
+ },
+ {
+  "name": "uc_m_2",
+  "without_cuts": {
+   "status": "optimal",
+   "obj": 136138.173738,
+   "bound": 136138.173738,
+   "gap": 0.0,
+   "nodes": 2603,
+   "iters": 40548,
+   "cuts": 0,
+   "cutrounds": 0,
+   "rootlp": 0.0,
+   "rootcut": 0.0,
+   "time": 1.2127854824066162
+  },
+  "with_cuts": {
+   "status": "optimal",
+   "obj": 136138.173738,
+   "bound": 136138.17373,
+   "gap": 5.876384623523872e-11,
+   "nodes": 1,
+   "iters": 1460,
+   "cuts": 74,
+   "cutrounds": 6,
+   "rootlp": 135480.441081,
+   "rootcut": 136138.17373,
+   "time": 0.05548286437988281
+  }
+ },
+ {
+  "name": "uc_s_0",
+  "without_cuts": {
+   "status": "optimal",
+   "obj": 52719.1086568,
+   "bound": 52719.1086568,
+   "gap": 0.0,
+   "nodes": 67,
+   "iters": 680,
+   "cuts": 0,
+   "cutrounds": 0,
+   "rootlp": 0.0,
+   "rootcut": 0.0,
+   "time": 0.022151708602905273
+  },
+  "with_cuts": {
+   "status": "optimal",
+   "obj": 52719.1086568,
+   "bound": 52719.1086412,
+   "gap": 2.9590793107543504e-10,
+   "nodes": 3,
+   "iters": 825,
+   "cuts": 31,
+   "cutrounds": 12,
+   "rootlp": 52267.0236562,
+   "rootcut": 52717.6101039,
+   "time": 0.027413606643676758
+  }
+ },
+ {
+  "name": "uc_s_1",
+  "without_cuts": {
+   "status": "optimal",
+   "obj": 77903.1755716,
+   "bound": 77903.1755716,
+   "gap": 0.0,
+   "nodes": 139,
+   "iters": 1003,
+   "cuts": 0,
+   "cutrounds": 0,
+   "rootlp": 0.0,
+   "rootcut": 0.0,
+   "time": 0.03584170341491699
+  },
+  "with_cuts": {
+   "status": "optimal",
+   "obj": 77903.1755716,
+   "bound": 77903.175569,
+   "gap": 3.3374830059114805e-11,
+   "nodes": 1,
+   "iters": 694,
+   "cuts": 41,
+   "cutrounds": 2,
+   "rootlp": 77556.1493398,
+   "rootcut": 77903.1755688,
+   "time": 0.014371871948242188
+  }
+ },
+ {
+  "name": "uc_s_2",
+  "without_cuts": {
+   "status": "optimal",
+   "obj": 57996.9636194,
+   "bound": 57996.9636194,
+   "gap": 0.0,
+   "nodes": 33,
+   "iters": 573,
+   "cuts": 0,
+   "cutrounds": 0,
+   "rootlp": 0.0,
+   "rootcut": 0.0,
+   "time": 0.01634502410888672
+  },
+  "with_cuts": {
+   "status": "optimal",
+   "obj": 57996.9636194,
+   "bound": 57996.9636097,
+   "gap": 1.6725015407125374e-10,
+   "nodes": 1,
+   "iters": 690,
+   "cuts": 27,
+   "cutrounds": 1,
+   "rootlp": 57915.5344296,
+   "rootcut": 57996.9636097,
+   "time": 0.01342010498046875
+  }
+ }
+]

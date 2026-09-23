@@ -1,0 +1,164 @@
+Refinery scheduling and process optimization
+============================================
+
+Measured 28 Aug 2026, aarch64 Linux, GCC 11, two cores.
+
+WHY THESE TWO FAMILIES EXIST
+----------------------------
+PS 26119 names eight application areas.  Every one of them had an instance
+family in bench/ except two: refinery SCHEDULING, and PROCESS optimization.
+Both were being covered by argument -- "the planning LP is the same shape" --
+rather than by an instance anybody could run.  An area with no instance is an
+area with no evidence, so here are the instances, and here is what solvers
+other than this one say about them.
+
+    python3 -c "import sys; sys.path.insert(0,'bench'); \
+        from generate import refinery_schedule; \
+        refinery_schedule(0,6,3,12,3,5,4,2).write('sched_m_0.mps')"
+    python3 -c "import sys; sys.path.insert(0,'bench'); \
+        from generate_qp import process_rto; \
+        process_rto(0,14,8,6,3).write('qrto_m_0.mps')"
+
+  Or take the bundled ones: `igaos -m sched_m`, `igaos -m qrto_m`.
+
+
+1. REFINERY SCHEDULING  (MILP)  --  bench/generate.py: refinery_schedule
+--------------------------------------------------------------------------
+The scheduling problem that sits UNDER the planning LP.  The planner decides
+volumes over a month; the scheduler decides the order and the switches over a
+week, and the switches are what make it combinatorial:
+
+  · one operating mode per unit per slot -- max-gasoline, max-distillate, off --
+    as a set-partitioning row, so the relaxation splits fractionally across
+    modes and has to be branched;
+  · a changeover binary that fires when the mode changes, carrying a real cost,
+    because swinging a cat cracker is hours of off-spec product;
+  · a minimum run length, so a mode entered has to be held -- the same structure
+    as minimum up-time in unit commitment, and just as weak in the relaxation;
+  · semi-continuous charge rates: a unit is off, or at or above its turndown,
+    never between;
+  · tank inventory balances with finite capacity linking every slot to the next,
+    which is what stops the horizon decoupling into T independent problems.
+
+Yields depend on the MODE.  That dependence is the point: it is the thing a
+fixed-yield planning LP cannot express, and it is why this family is not just
+`production_planning` with binaries bolted on.
+
+Unmet demand carries a shortfall variable at a penalty price, so the all-idle
+schedule is always feasible and the model is bounded.  A refinery scheduler
+writes the same term for the same reason.
+
+  sched_s    4 units, 3 modes,  8 slots     440 x 424    192 binaries
+  sched_m    6 units, 3 modes, 12 slots     972 x 924    432 binaries
+  sched_l    8 units, 4 modes, 16 slots    2200 x 1968  1024 binaries
+
+AGAINST HiGHS -- 9 instances (3 sizes x 3 seeds), 900 s limit
+
+  objective agrees with HiGHS ..... 9 / 9
+  proven optimal by IGAOS ......... 8 / 9
+  worst relative difference ....... 2.2e-12  (sched_l_1)
+  total time ...................... IGAOS 125 s, HiGHS 19 s
+
+  instance      rows x cols  bin |        IGAOS      t |        HiGHS      t
+  sched_s_0      440 x 424   192 |   1022791.718   0.04 |  1022791.718   0.17
+  sched_s_1      440 x 424   192 |    620971.669   0.02 |   620971.669   0.08
+  sched_s_2      440 x 424   192 |    436897.146   2.45 |   436897.146   3.14
+  sched_m_0      972 x 924   432 |   1757345.418   1.98 |  1757345.418   1.75
+  sched_m_1      972 x 924   432 |   1950659.139   1.93 |  1950659.139   1.36
+  sched_m_2      972 x 924   432 |    747840.808  11.68 |   747840.808   2.66
+  sched_l_0     2200 x 1968 1024 |   2951031.861  76.59 |  2951031.861   4.97
+  sched_l_1     2200 x 1968 1024 |   2199847.600  30.49 |  2199847.600   4.88
+  sched_l_2     2200 x 1968 1024 |   2134268.928 900.66 |  2134268.928  14.55   *
+
+  * sched_l_2 FINDS the optimum -- the same number HiGHS proves -- and does not
+    prove it inside 900 s.  It is reported as `feasible`, not as `optimal`,
+    which is the distinction this project cares most about.  HiGHS proves it in
+    14.55 s.  That is a 60x gap on the hardest instance in the family and it is
+    printed here rather than left out.
+
+AGAINST CPLEX AND GUROBI -- the sizes their free licences permit
+
+  The Community Edition caps at 1000x1000 and the restricted Gurobi licence at
+  2000x2000, so sched_l (2200 rows) is out of reach of both and only the six
+  sched_s and sched_m instances are comparable.  All three solvers at a 1e-9
+  relative MIP gap.
+
+  agree with CPLEX ................ 6 / 6
+  agree with Gurobi ............... 6 / 6
+  disagreements ................... 0
+
+  instance      IGAOS         t |  CPLEX          t |  Gurobi         t
+  sched_s_0     1022791.7   0.05 | 1022791.7   0.02 | 1022791.7   0.02
+  sched_s_1     620971.67   0.03 | 620971.67   0.02 | 620971.67   0.04
+  sched_s_2     436897.15   2.50 | 436897.15   0.12 | 436897.14   0.12
+  sched_m_0     1757345.4   1.87 | 1757345.4   0.08 | 1757345.4   0.15
+  sched_m_1     1950659.1   1.91 | 1950659.1   0.14 | 1950659.1   0.23
+  sched_m_2     747840.81  10.08 | 747840.81   0.54 | 747840.81   0.31
+
+  Same reading as bench/results_commercial.txt: this is a CORRECTNESS result.
+  The timings say we are 10x to 30x slower than the commercial solvers on this
+  family, at sizes where they have almost no room to show their advantage.
+
+
+2. PROCESS OPTIMIZATION  (convex QP)  --  bench/generate_qp.py: process_rto
+--------------------------------------------------------------------------
+The steady-state real-time-optimization layer: above the regulatory controls,
+below the planner.  Each unit has manipulated variables (severity, reflux, feed
+rate, catalyst circulation) and controlled ones (a product property, a bed
+temperature, a column loading), and around the current operating point the plant
+is described by its GAIN MATRIX -- the linearised steady state a plant test
+produces -- so
+
+    y_u - G_u x_u = y_u^0
+
+is a linear equality and the optimizer picks a new operating point subject to
+it.  Three terms in the objective, each quadratic for a physical reason:
+
+  · deviation of a controlled variable from target, squared, because being twice
+    as far off spec is worse than twice as bad;
+  · a move penalty on the manipulated variables, which is what stops the RTO
+    handing the regulatory layer a step it cannot make;
+  · utility consumption.  Compressor and pump power rise roughly with the square
+    of throughput, so the energy term really is quadratic.
+
+The Hessian is deliberately RANK DEFICIENT: about 40% of the controlled
+variables sit in a spec band with no target, so they appear in the constraints
+and not in Q at all.  That is the case a solver assuming a positive definite Q
+gets wrong.  Utility headers couple every unit, so the model does not decompose
+into `nunit` small ones.
+
+  qrto_s      6 units,  5 MV,  4 CV      28 x   56      47 quadratic terms
+  qrto_m     14 units,  8 MV,  6 CV      90 x  199     166 quadratic terms
+  qrto_l    150 units, 12 MV, 10 CV    1510 x 3305    2701 quadratic terms
+
+AGAINST OSQP -- 9 instances, OSQP at eps 1e-9 with polishing
+
+  agreeing with OSQP .............. 9 / 9
+  worst relative difference ....... 3.2e-08  (qrto_m_1)
+  worst violation, IGAOS .......... 7.1e-13
+  worst violation, OSQP ........... 1.1e-14
+  total time ...................... IGAOS 0.12 s, OSQP 0.08 s
+
+  Every instance takes the interior-point path and closes in 7 to 10 iterations;
+  qrto_l is 3,305 columns and 2,701 quadratic terms in 40 ms.  OSQP is a
+  first-order method, so a disagreement in the eighth digit is as likely to be
+  the reference as the solver under test -- both objectives are printed by the
+  harness so a reader can judge instead of taking a verdict.
+
+  These are small and easy, and saying so is more useful than dressing them up.
+  An RTO problem IS small: a refinery-wide one is thousands of variables, not
+  millions, and it is solved every few minutes rather than once a month.  The
+  hard part of process optimization is not the size.
+
+
+WHAT THESE TWO FAMILIES STILL DO NOT COVER
+------------------------------------------
+The POOLING PROBLEM.  Blend quality times flow is bilinear, so tracking true
+component qualities through an intermediate tank is nonconvex -- an MINLP, not a
+MILP or a QP.  Everything above, and `refinery_blend` alongside it, uses the
+linear volume-basis approximation, which is the standard PLANNING form and is
+what an LP-based refinery planner actually solves.  It is not the true problem.
+
+That is the one honest gap left in the process-optimization scope area, it is
+the same gap docs/EXTENSION-NLP-MINLP.md describes, and no instance in this file
+closes it.

@@ -1,0 +1,83 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-09-21T19:04:39Z",
+    "lifecycles": [
+      {
+        "phase": "build"
+      }
+    ],
+    "component": {
+      "type": "library",
+      "bom-ref": "pkg:generic/igaos@0.2.0",
+      "name": "igaos",
+      "version": "0.2.0",
+      "description": "Indigenous GPU-Accelerated Optimization Solver -- LP, MILP, QP, MIQP, NLP and MINLP, written from the mathematical foundation up in C++17 with no third-party numerical library.",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "name": "See LICENSE -- team-owned, with a perpetual royalty-free grant to MRPL, ONGC, MoE and AICTE"
+          }
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "73e8d391425b5c01f9870ee546568146b042dbb8eb54537a8eadcbc8028510d3"
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "igaos:thirdPartyRuntimeDependencies",
+        "value": "0"
+      },
+      {
+        "name": "igaos:thirdPartyBuildDependencies",
+        "value": "0"
+      },
+      {
+        "name": "igaos:buildRequirements",
+        "value": "C++17 compiler; CMake >= 3.16; OpenMP optional"
+      },
+      {
+        "name": "igaos:transitiveCveSurface",
+        "value": "none -- no third-party library is linked at any layer, so no CVE in a dependency can apply. This is a supply-chain property and explicitly NOT a memory-safety claim; see SECURITY.md."
+      },
+      {
+        "name": "igaos:linkedOptimizationLibraries",
+        "value": "none -- not CPLEX, Gurobi, Xpress, COIN-OR, HiGHS, GLPK, SCIP, OSQP, BLAS, LAPACK, SuiteSparse or Eigen"
+      },
+      {
+        "name": "igaos:optionalToolchainComponents",
+        "value": "OpenMP (compiler runtime, optional, degrades to serial); CUDA toolkit (compile-only, never linked into the CPU build, kernels never executed on a device)"
+      },
+      {
+        "name": "igaos:benchmarkOnlyPythonPackages",
+        "value": "osqp, cplex, gurobipy, highspy -- used ONLY by scripts under bench/ to produce reference numbers. Not imported by the solver, the library, the CLI or the Python bindings, and not required to build or run any of them."
+      },
+      {
+        "name": "igaos:firstPartySourceFiles",
+        "value": "50"
+      },
+      {
+        "name": "igaos:firstPartySourceLines",
+        "value": "16628"
+      },
+      {
+        "name": "igaos:firstPartySourceSha256",
+        "value": "73e8d391425b5c01f9870ee546568146b042dbb8eb54537a8eadcbc8028510d3"
+      }
+    ]
+  },
+  "components": [],
+  "dependencies": [
+    {
+      "ref": "pkg:generic/igaos@0.2.0",
+      "dependsOn": []
+    }
+  ]
+}

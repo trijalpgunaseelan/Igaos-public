@@ -1,0 +1,189 @@
+NLP and MINLP
+=============
+
+Measured 29 Aug 2026, aarch64 Linux, GCC 11, two cores.
+
+    cd build && ctest -R "nlp|pooling" --output-on-failure
+
+    python3 bench/generate_pooling.py benchmarks/pooling --seeds 3
+    ./build/igaos_pooling_bench benchmarks/pooling
+
+WHAT WAS BUILT
+--------------
+Until 28 August this project's answer on NLP and MINLP was a design document
+saying they were not implemented and describing what they would take.  That
+document was right about the architecture and wrong about one thing, which is
+recorded in docs/EXTENSION-NLP-MINLP.md rather than quietly corrected.
+
+There are now two solvers, and the difference between them is the whole subject:
+
+  src/global.cpp   NONCONVEX QCQP and BILINEAR MINLP, solved to PROVEN GLOBAL
+                   optimality.  Spatial branch and bound over McCormick
+                   relaxations, with interval and optimality-based bound
+                   tightening.  This is the class refinery pooling lives in.
+
+  src/nlp.cpp      GENERAL SMOOTH NLP, solved to a LOCAL optimum.  Primal-dual
+                   interior point on the augmented KKT system, filter line
+                   search, inertia correction.  Exact first and second
+                   derivatives from src/expr.cpp -- a tape, reverse mode for
+                   gradients, forward-over-reverse for Hessians.  Plus branch
+                   and bound over NLP relaxations for integer variables, which
+                   does NOT claim global optimality and says so in its result.
+
+===========================================================================
+1. HAVERLY'S POOLING PROBLEMS -- against published global optima
+===========================================================================
+The standard counterexample in refinery optimization, and the reason this class
+matters: the linear model of a blending network reports a blend that cannot be
+made.  Published optima 400, 600, 750.
+
+  instance   published        igaos    status    nodes   primal infeasibility
+  HPP1         -400.00   -400.000000   optimal       5   0.00e+00
+  HPP2         -600.00   -600.000000   optimal       5   0.00e+00
+  HPP3         -750.00   -750.000000   optimal       3   0.00e+00
+
+What the SAME network says with the pool quality pinned at a constant, which is
+what every linear model in this repository does:
+
+                        pool at 1%     pool at 2%     pool at 3%   TRUE
+  HPP1                     -400.00           0.00        -100.00   -400
+  HPP2                     -400.00           0.00        -600.00   -600
+  HPP3                     -700.00           0.00        -100.00   -750
+
+No column is right three times.  That is not a tuning problem; a single fixed
+quality cannot represent a quantity the optimizer is supposed to be choosing.
+
+The LP relaxation of HPP1 is -500 against a true -400: 25% optimistic, and a
+planner acting on it schedules a blend that does not exist.  `igaos -m haverly1`
+prints both -- rootlp=-500, final -400.
+
+===========================================================================
+2. GLOBAL vs MULTISTART LOCAL -- two solvers, no shared code
+===========================================================================
+On the generated instances there is no published value and no grid small enough
+to enumerate.  So the check is the other solver in this source tree: the NLP
+interior point method, started from 40 random points on the SAME model, working
+on the true nonconvex functions with no relaxation anywhere.
+
+Two things had to hold.  No local solution may beat the global one -- a single
+counterexample would mean a subtree containing the optimum had been pruned.  And
+multistart should REACH the global optimum, or the "global" answer is more
+likely a bug than a discovery.
+
+instance       rows   cols  bilin |          global  nodes |      best local     worst local  hits
+haverly1.mps      6      7      8 |     -400.000000      5 |     -400.000000     -100.000000   30
+haverly2.mps      6      7      8 |     -600.000000      5 |     -600.000000     -400.000000   19
+haverly3.mps      6      7      8 |     -750.000000      3 |     -750.000000     -750.000000   40
+pool_l_0.mps     21     28     48 |    -1611.776152     55 |    -1611.776152    -1611.776152   40
+pool_l_1.mps     21     28     48 |     -926.800974      1 |     -926.800974     -926.800974   40
+pool_l_2.mps     21     28     48 |    -1544.348842      1 |    -1544.348842    -1544.348842   40
+pool_m_0.mps     15     21     24 |    -2464.354237      5 |    -2464.354237    -2464.354237   40
+pool_m_1.mps     15     21     24 |    -1723.626419      3 |    -1723.626419    -1723.626419   40
+pool_m_2.mps     15     21     24 |    -1147.898213      1 |    -1147.898213    -1147.898213   40
+pool_s_0.mps     10      9      8 |    -2028.011892      1 |    -2028.011892    -2028.011892   40
+pool_s_1.mps     10      9      8 |     -348.240569     19 |     -348.240569     -348.240569   40
+pool_s_2.mps     10      9      8 |    -2092.852467      1 |    -2092.852467    -2092.852467   40
+
+  instances .................................. 12
+  a local solution BEAT the global optimum ... 0     (must be 0)
+  multistart reached the global optimum ...... 12 / 12
+  worst spread between local solutions ....... 74.8%
+
+READ THE `hits` COLUMN, IT IS THE POINT.  On haverly1 the local method reaches
+the true 400 in 30 starts out of 40 and lands on 100 in the other ten -- a 75%
+error, reported as a converged optimal solution with zero constraint violation.
+On haverly2 it is wrong in 21 starts out of 40.  Nothing about those runs looks
+like a failure; they are KKT points, and a local method has no way to know.
+
+AND THE HONEST OTHER HALF: on the nine GENERATED instances every start reaches
+the same answer, so the spread is 0.0% and the global solver bought nothing.
+Those instances have one local optimum each.  They are a fair test that the
+global solver is CORRECT and no test at all of whether it is NECESSARY.  The
+Haverly cases are in the family precisely because the generated ones turned out
+too easy, and saying so is more useful than quoting the 74.8% without it.
+
+===========================================================================
+3. HOCK-SCHITTKOWSKI -- the general NLP against published optima
+===========================================================================
+The standard nonlinear programming test collection.  Small, nasty, and published:
+HS5 has a trigonometric objective, HS7 an equality with a quartic in it, HS71 is
+the four-variable model the interior point literature uses as its worked example.
+
+  prob        published            igaos     status  iters  primal inf
+  HS1                 0   1.00754751e-18    optimal     31    0.00e+00
+  HS3                 0   2.50590356e-09    optimal      9    0.00e+00
+  HS4         2.6666667       2.66666667    optimal     10    0.00e+00
+  HS5        -1.9132229      -1.91322295    optimal     13    0.00e+00
+  HS6                 0   1.05002008e-18    optimal      7    2.82e-09
+  HS7        -1.7320508      -1.73205081    optimal     25    2.08e-13
+  HS12              -30              -30    optimal     16    0.00e+00
+  HS22                1       1.00000001    optimal     11    0.00e+00
+  HS35       0.11111111      0.111111114    optimal     12    0.00e+00
+  HS36            -3300            -3300    optimal     16    0.00e+00
+  HS71        17.014017       17.0140173    optimal     13    1.91e-11
+  HS76       -4.6818182      -4.68181818    optimal     12    0.00e+00
+
+  converged .................. 12 / 12
+  matched the published value  12 / 12
+
+The first run was 9 / 12.  The three failures were HS6, HS7 and HS71 -- every
+problem in the set with an EQUALITY constraint, all failing at iteration zero.
+An equality's slack has a degenerate box, so the barrier was being applied to a
+point sitting exactly on both of its own bounds; the (2,2) block of the KKT
+matrix went to zero, the factorization regularized a pivot, the inertia
+correction read that as a wrong inertia and climbed to 1e40.  Equality slacks
+are now pinned and excluded from the barrier, and their row of the condensed
+system carries 1/sigma = 0, which is the correct statement rather than an
+approximation of one.
+
+===========================================================================
+4. EXACT DERIVATIVES -- against central differences
+===========================================================================
+Everything above rests on the derivatives.  A wrong gradient does not crash: it
+produces an unhelpful direction, the line search shortens the step, and the
+method converges to something that is not a solution.
+
+  40 random expressions using every operation on the tape
+  worst relative gradient error ............. 1.25e-09
+  worst relative Hessian-vector error ....... 1.42e-09
+
+Both are the differencing error, not the derivative error: central differences
+at h = 1e-6 are good to a few parts in 1e-9 and no better.  The derivatives
+themselves are exact -- same arithmetic, same rounding, no step size.
+
+===========================================================================
+5. MINLP
+===========================================================================
+Two different things share the name, and the guarantees are not the same.
+
+  BILINEAR / QUADRATIC MINLP -- src/global.cpp.  The relaxation of a spatial
+  node is a MILP, solved by the existing branch and cut, so integer variables
+  and continuous nonconvexity are searched by ONE tree.  Verified against
+  exhaustive enumeration over the integers combined with a grid over the
+  continuous part (tests/test_all.cpp).  This proves GLOBAL optimality.
+
+  GENERAL SMOOTH MINLP -- solveMinlp in src/nlp.cpp.  Branch and bound over NLP
+  relaxations.  For a convex model that is a proof; for a nonconvex one a local
+  solution is not a bound and a pruned subtree may have held the answer.  This
+  code cannot decide convexity of an arbitrary expression graph, so it assumes
+  the worse case: status is Feasible, never Optimal, and `provenGlobal` is
+  false.  Checked against exhaustive enumeration on a model small enough to
+  enumerate, where it finds the right answer -- which is evidence, not a proof,
+  and the field is named to keep those apart.
+
+===========================================================================
+WHAT IS STILL NOT THERE
+===========================================================================
+  * No file format for a general NLP.  QCMATRIX in MPS carries quadratic
+    constraints, so the pooling class round-trips through a file and runs from
+    the CLI; an exp or log constraint has to be built through the C++ API.
+  * The spatial tree is SERIAL.  The mixed-integer tree beside it is a worker
+    pool; this one is not.
+  * No convexity detection, so a convex MINLP is not recognised as one and does
+    not get the stronger claim it would deserve.
+  * No second-order correction in the line search, and no restoration phase.  A
+    filter method without restoration can reject every trial step; this one
+    loosens the barrier instead, which usually works and is not the same thing.
+  * The generated pooling instances are small -- 21 rows at the largest.  A
+    spatial tree grows with the number of bilinear terms, and nothing here says
+    what happens at refinery scale.  That is the honest boundary of section 2.

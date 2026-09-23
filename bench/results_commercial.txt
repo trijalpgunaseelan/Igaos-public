@@ -1,0 +1,101 @@
+IGAOS against CPLEX and Gurobi
+==============================
+
+Measured 28 Aug 2026, aarch64 Linux, GCC 11, two cores.  Reproduce with
+
+    ./bench/fetch_benchmarks.sh            # creates benchmarks/standard
+    pip install cplex gurobipy
+    python3 bench/commercial.py --dir benchmarks/standard --time-limit 60
+
+(The first line used to be missing and the directory it names did not exist --
+defect 22.  A number nobody else can reproduce is a claim, not a measurement.)
+
+The IGAOS times below are with the branch-and-cut tree running on both of this
+machine's cores, which is the default; see bench/results_parallel.txt.  They are
+roughly half what the same table showed when the tree was serial.  The commercial
+solvers were on the same two cores.
+
+Until this run every comparison in the project was against open source, because
+the team had no commercial licence.  Two of the three solvers PS 26119 names
+ship a free size-limited licence of the real product:
+
+    CPLEX Community Edition    1000 rows x 1000 columns
+    Gurobi restricted licence  2000 rows x 2000 columns
+
+THE CAVEAT, FIRST
+-----------------
+Those limits cap every instance below at a size where a mature commercial solver
+has almost no room to show its advantage.  Nothing here supports any claim about
+how IGAOS behaves at industrial scale against CPLEX or Gurobi.  It supports one
+claim, and it is the claim that was missing until now: THE ANSWERS AGREE.
+
+Both commercial solvers were run with their MIP gap tightened to 1e-9.  Left at
+the default 1e-4 they stop early and report a suboptimal incumbent as "optimal",
+which produced two false disagreements on the first run of this harness --
+dcmulti and gesa2.  That was a defect in the comparison, not in any solver, and
+it is recorded here because it is exactly the kind of mistake that turns into a
+false claim if nobody re-runs it.
+
+RESULT — 22 instances from the HiGHS mirror of the standard sets
+----------------------------------------------------------------
+  agree with CPLEX ....... 13 / 13 comparable
+  agree with Gurobi ...... 21 / 22 comparable
+  disagreements .......... 1   bell5
+
+instance          rows x cols   int |         IGAOS      t |         CPLEX     t |        Gurobi     t
+25fv47              821x1571      0 |     5501.8459  1.05s |             -     - |     5501.8459 0.13s
+adlittle             56x97        0 |     225494.96  0.00s |     225494.96 0.00s |     225494.96 0.00s
+afiro                27x32        0 |    -464.75314  0.01s |    -464.75314 0.00s |    -464.75314 0.00s
+avgas                10x8         0 |         -7.75  0.01s |         -7.75 0.00s |         -7.75 0.00s
+bell5                91x104      58 |     9032233.9 60.15s |     8966406.5 0.04s |     8966406.5 0.08s
+dcmulti             290x548      75 |        188182  1.46s |        188182 0.13s |        188182 0.17s
+e226                223x282       0 |    -11.638929  0.03s |    -11.638929 0.00s |    -11.638929 0.01s
+egout                98x141      55 |      568.1007  0.03s |      568.1007 0.00s |      568.1007 0.00s
+etamacro            400x688       0 |    -755.71523  0.02s |    -755.71523 0.01s |    -755.71523 0.01s
+gesa2              1392x1224    408 |      25779856  6.95s |             -     - |      25779856 0.16s
+gt2                  29x188     188 |         21166 60.16s |         21166 0.01s |         21166 0.01s
+israel              174x142       0 |    -896644.82  0.02s |    -896644.82 0.00s |    -896644.82 0.00s
+lseu                 28x89       89 |          1120  0.43s |          1120 0.07s |          1120 0.09s
+p0548               176x548     548 |          8691  0.36s |          8691 0.04s |          8691 0.02s
+perold              625x1376      0 |    -9380.7553  0.48s |             -     - |    -9380.7553 0.05s
+rgn                  24x180     100 |     82.199999  1.06s |     82.199999 0.03s |     82.199998 0.02s
+scrs8               490x1169      0 |     904.29695  0.03s |     904.29695 0.01s |     904.29695 0.01s
+shell               536x1775      0 | 1.2088253e+09  0.02s |             -     - | 1.2088253e+09 0.00s
+stair               356x467       0 |    -251.26695  0.03s |    -251.26695 0.01s |    -251.26695 0.01s
+standata            359x1075      0 |     1257.6995  0.01s |             -     - |     1257.6995 0.00s
+standgub            361x1184      0 |     1257.6995  0.01s |             -     - |     1257.6995 0.00s
+standmps            467x1075      0 |     1406.0175  0.04s |             -     - |     1406.0175 0.00s
+
+("-" means the instance is larger than that licence permits.)
+
+THE ONE DISAGREEMENT
+--------------------
+bell5.  IGAOS returns 9,032,233.9 at 60 s and reports status FEASIBLE -- not
+optimal.  CPLEX and Gurobi both prove 8,966,406.5 in under a tenth of a second.
+
+Given 300 seconds instead of 60 it gets to 8,988,498.5: 0.25% above the true
+optimum and still not closed.  This is not a wrong answer.  It is an unfinished
+one, correctly labelled, and bell5 was already the known failure in
+results_milp.csv.
+
+The incumbent bell5 reports at a given time limit MOVES between runs now, because
+the tree is parallel and which subtree opens first is not deterministic.  Three
+different figures appear in this repository's history for the same instance --
+9,065,322 / 9,032,234 / 8,988,498 -- and all three are honest readings of an
+unfinished search.  bench/results_parallel.txt says the same thing at more
+length: what a parallel tree is allowed to change is the incumbent at a limit,
+never the answer at optimality.
+
+WHAT THIS DOES NOT SAY
+----------------------
+Look at the timings and the honest reading is plain: on mixed-integer models
+IGAOS is between one and three orders of magnitude slower than either commercial
+solver.  gt2 takes 60 seconds here and 0.01 seconds in CPLEX.  bell5 it does not
+finish at all.  Putting the tree on both cores roughly halved these times and
+changed nothing about that conclusion -- a 2x is not a 1000x.
+
+That gap is thirty years of engineering, and no run in this file narrows it.
+What the file establishes is that where IGAOS finishes, it finishes at the same
+answer as CPLEX and Gurobi -- 34 agreements, 0 wrong answers -- which is the
+prerequisite for everything else, and which the project could not previously
+claim at all.

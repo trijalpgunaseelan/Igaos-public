@@ -1,0 +1,34 @@
+# Deploy IGAOS Solver Studio to Fly.io on every push to main.
+#
+# One-time setup:
+#   flyctl auth token          # on your Mac, copy the token
+#   repo Settings > Secrets and variables > Actions > FLY_API_TOKEN
+
+name: deploy to fly
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['Deck/**', 'Jury/**', '**/*.md']
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency: deploy-fly
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --config deploy/fly.toml --remote-only --yes
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: prove it is up
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          APP=$(sed -n 's/^app *= *"\(.*\)".*/\1/p' deploy/fly.toml | head -1)
+          for i in $(seq 1 20); do
+            curl -fsS "https://$APP.fly.dev/healthz" && break || sleep 5
+          done
+          echo "### Solver Studio is live" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://$APP.fly.dev" >> "$GITHUB_STEP_SUMMARY"

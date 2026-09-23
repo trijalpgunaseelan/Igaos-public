@@ -1,0 +1,36 @@
+28 provably infeasible instances · time limit 150 s
+
+instance            reported     time    residual   note
+------------------------------------------------------------------------------
+bgdbg1            infeasible     0.00    1.92e+02   
+bgetam            infeasible     0.00    5.50e+01   
+bgindy            infeasible     0.00    6.53e+04   
+bgprtr            infeasible     0.00    1.90e+02   
+box1              infeasible     0.00    1.00e+00   
+ceria3d           infeasible     0.00    1.00e+00   
+chemcom           infeasible     0.00    1.00e+04   
+cplex1            infeasible     0.00    3.02e+07   
+cplex2               optimal     0.02    8.10e-08   WRONG — reports an optimum for a model with no feasible point
+ex72a             infeasible     0.00    1.00e+00   
+ex73a             infeasible     0.00    1.00e+00   
+forest6           infeasible     0.00    2.66e+03   
+galenet           infeasible     0.00    3.00e+01   
+gosh              infeasible     1.03    4.00e+00   
+gran              infeasible     0.00    5.65e+02   
+itest2            infeasible     0.00    5.00e+00   
+itest6            infeasible     0.00    8.70e+04   
+klein1            infeasible     0.00    3.56e+00   
+klein2            infeasible     0.06    1.67e+03   
+klein3            infeasible     0.59    4.47e+03   
+mondou2           infeasible     0.00    8.69e+03   
+pang              infeasible     0.01    2.60e-01   
+pilot4i           infeasible     0.00    2.41e+04   
+qual              infeasible     0.01    3.80e+02   
+reactor           infeasible     0.00    8.52e+03   
+refinery          infeasible     0.01    2.59e+04   
+vol1              infeasible     0.01    7.55e+02   
+woodinfe          infeasible     0.00    1.00e+02   
+
+======================================================================
+correctly reported infeasible .. 27 / 28
+reported optimal (WRONG) ....... 1: cplex2

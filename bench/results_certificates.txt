@@ -1,0 +1,89 @@
+IGAOS certificate verification over Netlib, measured 2026-08-26
+aarch64 Linux.  55 smallest Netlib instances.  Checker: tools/verify_certificate.py
+-- exact rational arithmetic, its own MPS reader, no floating point anywhere.
+
+instance     size      verdict
+perold        218376B  lower bound proven
+bnl1          210061B  lower bound proven
+fffff800      206468B  lower bound proven
+grow15        202806B  lower bound proven
+seba          198297B  bounded interval
+ship04s       193282B  lower bound proven
+forplan       191859B  lower bound proven
+scsd6         185807B  CLAIM NOT SUPPORTED
+pilot4        183731B  lower bound proven
+scfxm2        179702B  lower bound proven
+shell         178786B  PROVEN OPTIMAL
+agg3          162662B  lower bound proven
+agg2          162339B  lower bound proven
+degen2        152758B  lower bound proven
+tuff          147436B  lower bound proven
+modszk1       139978B  lower bound proven
+boeing1       138507B  lower bound proven
+scrs8         135725B  lower bound proven
+standmps      130826B  lower bound proven
+gfrd-pnc      130482B  lower bound proven
+stair         129354B  lower bound proven
+beaconfd      112437B  lower bound proven
+standgub      111339B  lower bound proven
+standata      107271B  lower bound proven
+scsd1         102979B  CLAIM NOT SUPPORTED
+finnis         99896B  lower bound proven
+agg            99348B  lower bound proven
+etamacro       94766B  lower bound proven
+grow7          94429B  lower bound proven
+e226           92230B  lower bound proven
+bandm          91165B  lower bound proven
+scfxm1         89706B  lower bound proven
+israel         80457B  lower bound proven
+scagr25        75242B  lower bound proven
+sctap1         74864B  lower bound proven
+brandy         71520B  lower bound proven
+capri          68608B  lower bound proven
+scorpion       60285B  lower bound proven
+bore3d         51550B  lower bound proven
+boeing2        48147B  lower bound proven
+share1b        41581B  lower bound proven
+vtp.base       39064B  lower bound proven
+lotfi          37067B  lower bound proven
+recipe         29540B  bounded interval
+share2b        24679B  lower bound proven
+sc205          21861B  lower bound proven
+scagr7         20701B  lower bound proven
+blend          19713B  lower bound proven
+stocfor1       16674B  lower bound proven
+adlittle       16500B  lower bound proven
+sc105          11164B  lower bound proven
+kb2            10149B  lower bound proven
+sc50a           5249B  lower bound proven
+sc50b           4656B  lower bound proven
+afiro           3244B  lower bound proven
+
+checked 55 instances
+  proven optimal exactly ....... 1
+  rigorous bound established ... 52
+  claim not supported .......... 2
+  rejected ..................... 0
+  no verdict ................... 0
+
+NOTES
+
+  "proven optimal exactly" requires the primal point to be EXACTLY feasible in
+  rational arithmetic.  A point produced in floating point almost never is, so
+  one instance out of fifty-five is the expected number, not a disappointment.
+
+  "rigorous bound established" is the useful verdict: L(y) is a valid lower
+  bound on the optimum whatever the primal point turns out to be, and the exact
+  distance from it to the reported objective is printed.  On most instances that
+  distance is at the 1e-10 level or below.
+
+  scsd1 and scsd6 are the two that do not support their claim.  Both have small
+  objectives (8.67 and 50.5) and reduced costs converged to about 2e-9 rather
+  than to rounding level, so the safe-bounding penalty lands just over the 1e-6
+  relative threshold.  That is a real, if narrow, statement about how far the
+  duals converged on those two models -- it is not hidden in the totals.
+
+  Certificates are not yet produced for two paths: the branch-and-bound tree
+  emits no dual multipliers, and infeasibility detected inside presolve produces
+  no Farkas ray.  Both are reported by the checker as unprovable rather than
+  passed silently.

@@ -1,0 +1,17 @@
+# Render — New > Blueprint, point it at this repo
+services:
+  - type: web
+    name: igaos-solver-studio
+    runtime: docker
+    dockerfilePath: ./deploy/Dockerfile
+    dockerContext: .
+    region: singapore
+    plan: starter                    # free tier sleeps after 15 min idle; starter does not
+    healthCheckPath: /healthz
+    envVars:
+      - key: IGAOS_TIME_LIMIT
+        value: "20"
+      - key: IGAOS_MAX_CONCURRENT
+        value: "2"
+      - key: IGAOS_THREADS
+        value: "1"
